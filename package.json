@@ -1,0 +1,11 @@
+{
+    "type": "module",
+    "bugs": {
+        "url": "https://github.com/brave/pull-merge/issues",
+        "email": "security@brave.com"
+    },
+    "dependencies": {
+        "@octokit/core": "^5.0.2",
+        "openai": "^4.20.1"
+    }
+}
