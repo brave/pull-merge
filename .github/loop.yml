@@ -1,0 +1,27 @@
+name: loop
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  loop:
+    name: loop
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          fetch-depth: 0
+      - run: |
+          pwd
+          tree -a
+        shell: bash
+      - uses: ./
+        with:
+          debug: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
