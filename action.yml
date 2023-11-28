@@ -1,12 +1,88 @@
 name: 'puLL-Merge'
-description: puLL-Merge is a github-action to add LLM capabilities to pull-requests in github automatically
+description: 'puLL-Merge is a github-action to add LLM capabilities to pull-requests in github automatically'
 inputs:
-outputs:
+  github_token:
+    description: |
+      Secret token to push review comments, and
+      interact with the repository systematically
+    required: true
+  openai_api_key:
+    description: |
+      API key to interact with the OpenAI endpoint
+  debug:
+    description: enables debug output for this action
+    required: false
+
+# outputs:
 runs:
   using: 'composite'
   steps:
+    - uses: actions/setup-node@8f152de45cc393bb48ce5d89d36b731f54556e65 # v4.0.0
+      with:
+        node-version: '20.x'
+    - id: npm
+      run: npm ci
+      shell: bash
     - id: llm-and-post-message
       uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+      if: ${{ inputs.openai_api_key != '' }}
+      env:
+        OPENAI_API_KEY: ${{ inputs.openai_api_key }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
       with:
           script: |
-            console.log('implement me')
+            const { default: explainPatch } = await import('${{ github.action_path }}/src/openaiExplainPatch.js')
+
+            const watermark = `[puLL-Merge] - ${process.env.GITHUB_REPOSITORY}@${context.issue.number}`
+
+            const patchExplained = watermark+"\n\n"+(await explainPatch({
+              openaiKey: process.env.OPENAI_API_KEY,
+              github: github,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              prnum: context.issue.number }));
+
+            const query = `query($owner:String!, $name:String!, $prnumber:Int!) { 
+              repository(owner:$owner, name:$name) { 
+                pullRequest(number:$prnumber) {
+                  comments(last: 100) {
+                    nodes {
+                      id
+                      author { login }
+                      body
+                      bodyHTML
+                      bodyText
+                    }
+                  }
+                }
+              }
+            }`;
+            const variables = {
+              owner: context.repo.owner,
+              name: context.repo.repo,
+              prnumber: context.issue.number
+            }
+            const messages = (await github.graphql(query, variables)).repository.pullRequest.comments.nodes;
+
+            const deleteQuery = `mutation DeleteIssueComment($id:ID!) {
+              deleteIssueComment(input:{id:$id}) {
+                clientMutationId
+              }
+            }`
+
+            for (var i = 0; i < messages.length; i++) {
+              if (messages[i].body.includes(watermark)) {
+                console.log(messages[i])
+                await github.graphql(deleteQuery, {id: messages[i].id});
+              }
+            }
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: patchExplained
+            });
+
+
+            
