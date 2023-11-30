@@ -35,54 +35,57 @@ runs:
 
             const watermark = `[puLL-Merge] - ${process.env.GITHUB_REPOSITORY}@${context.issue.number}`
 
-            const patchExplained = watermark+"\n\n"+(await explainPatch({
-              openaiKey: process.env.OPENAI_API_KEY,
-              github: github,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              prnum: context.issue.number }));
+            try {
+              const patchExplained = watermark+"\n\n"+(await explainPatch({
+                openaiKey: process.env.OPENAI_API_KEY,
+                github: github,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                prnum: context.issue.number }));
 
-            const query = `query($owner:String!, $name:String!, $prnumber:Int!) { 
-              repository(owner:$owner, name:$name) { 
-                pullRequest(number:$prnumber) {
-                  comments(last: 100) {
-                    nodes {
-                      id
-                      author { login }
-                      body
-                      bodyHTML
-                      bodyText
+              const query = `query($owner:String!, $name:String!, $prnumber:Int!) { 
+                repository(owner:$owner, name:$name) { 
+                  pullRequest(number:$prnumber) {
+                    comments(last: 100) {
+                      nodes {
+                        id
+                        author { login }
+                        body
+                        bodyHTML
+                        bodyText
+                      }
                     }
                   }
                 }
+              }`;
+              const variables = {
+                owner: context.repo.owner,
+                name: context.repo.repo,
+                prnumber: context.issue.number
               }
-            }`;
-            const variables = {
-              owner: context.repo.owner,
-              name: context.repo.repo,
-              prnumber: context.issue.number
+              const messages = (await github.graphql(query, variables)).repository.pullRequest.comments.nodes;
+
+              const deleteQuery = `mutation DeleteIssueComment($id:ID!) {
+                deleteIssueComment(input:{id:$id}) {
+                  clientMutationId
+                }
+              }`
+
+              for (var i = 0; i < messages.length; i++) {
+                if (messages[i].body.includes(watermark)) {
+                  console.log(messages[i])
+                  await github.graphql(deleteQuery, {id: messages[i].id});
+                }
+              }
+
+              github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: patchExplained
+              });
+            } catch (error) {
+              console.log(error);
             }
-            const messages = (await github.graphql(query, variables)).repository.pullRequest.comments.nodes;
 
-            const deleteQuery = `mutation DeleteIssueComment($id:ID!) {
-              deleteIssueComment(input:{id:$id}) {
-                clientMutationId
-              }
-            }`
-
-            for (var i = 0; i < messages.length; i++) {
-              if (messages[i].body.includes(watermark)) {
-                console.log(messages[i])
-                await github.graphql(deleteQuery, {id: messages[i].id});
-              }
-            }
-
-            github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: patchExplained
-            });
-
-
-            
+              
