@@ -38,7 +38,7 @@ export default async function explainPatch({openaiKey, owner, repo, prnum,
     messages: [
           {
             "role": "system",
-            "content": "Explain the patch:\n\n"
+            "content": system_prompt,
           },
           {
             "role": "user",
