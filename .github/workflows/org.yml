@@ -1,0 +1,20 @@
+name: puLL-Merge
+on:
+  pull_request:
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  pull-merge:
+    name: puLL-Merge
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          fetch-depth: 0
+      - uses: brave/pull-merge@main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
