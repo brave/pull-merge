@@ -28,5 +28,5 @@ jobs:
 ## Testing LLM integrations (local)
 
 ```bash
-$ ./run.js ./src/explainPatch.js --openaiKey=<OPENAI_KEY> --repo=brave/security-action --prnum=406
+$ ./run.js ./src/openaiExplainPatch.js --githubKey=<GITHUB_KEY> --openaiKey=<OPENAI_KEY> --owner=brave --repo=security-action --prnum=406
 ```
