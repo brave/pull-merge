@@ -3,7 +3,7 @@ import OpenAI from "openai";
 export default async function explainPatch({openaiKey, owner, repo, prnum,
   githubToken=null, 
   github=null,
-  model="gpt-4-1106-preview",
+  model="gpt-3.5-turbo-instruct",
   system_prompt="Explain the patch:\n\n",
   max_tokens=2048,
   temperature=1,
