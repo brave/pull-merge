@@ -9,6 +9,10 @@ inputs:
   openai_api_key:
     description: |
       API key to interact with the OpenAI endpoint
+  debounce_time:
+    description: |
+      Debounce Time in hours
+    default: "6"
   debug:
     description: enables debug output for this action
     required: false
@@ -30,22 +34,31 @@ runs:
         OPENAI_API_KEY: ${{ inputs.openai_api_key }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
         DEBUG: ${{ inputs.debug }}
+        DEBOUNCE_TIME: ${{ inputs.debounce_time }}
       with:
           script: |
             const debug = process.env.DEBUG == 'true';
             if (debug) console.log("Initializing puLL-Merge");
-            const { default: explainPatch } = await import('${{ github.action_path }}/src/openaiExplainPatch.js')
+            const debounceHours = parseInt(process.env.DEBOUNCE_TIME, 10);
+            const { default: explainPatch } = await import('${{ github.action_path }}/src/openaiExplainPatch.js');
+
+            function isOlderThanXHours(date, hours) {
+              // Get the current date and time
+              var now = new Date();
+                
+              // Calculate the time difference in milliseconds
+              var timeDiff = now - new Date(date);
+                
+              // Convert the time difference to hours
+              var timeDiffInHours = timeDiff / (1000 * 60 * 60);
+                
+              // Check if the time difference is greater than the specified number of hours
+              return timeDiffInHours > hours;
+            }
 
             const watermark = `[puLL-Merge] - ${process.env.GITHUB_REPOSITORY}@${context.issue.number}`
 
             try {
-              const patchExplained = watermark+"\n\n"+(await explainPatch({
-                openaiKey: process.env.OPENAI_API_KEY,
-                github: github,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                prnum: context.issue.number }));
-
               const query = `query($owner:String!, $name:String!, $prnumber:Int!) { 
                 repository(owner:$owner, name:$name) { 
                   pullRequest(number:$prnumber) {
@@ -54,8 +67,7 @@ runs:
                         id
                         author { login }
                         body
-                        bodyHTML
-                        bodyText
+                        updatedAt
                       }
                     }
                   }
@@ -67,6 +79,10 @@ runs:
                 prnumber: context.issue.number
               }
               const messages = (await github.graphql(query, variables)).repository.pullRequest.comments.nodes;
+
+              if (messages.some(msg => msg.body.includes(watermark) && !isOlderThanXHours(msg.updatedAt, debounceHours))) {
+                throw new Error("debounce");
+              }
 
               const deleteQuery = `mutation DeleteIssueComment($id:ID!) {
                 deleteIssueComment(input:{id:$id}) {
@@ -80,6 +96,13 @@ runs:
                   await github.graphql(deleteQuery, {id: messages[i].id});
                 }
               }
+
+              const patchExplained = watermark+"\n\n"+(await explainPatch({
+                openaiKey: process.env.OPENAI_API_KEY,
+                github: github,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                prnum: context.issue.number }));
 
               github.rest.issues.createComment({
                 owner: context.repo.owner,
