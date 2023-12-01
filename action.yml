@@ -29,9 +29,11 @@ runs:
       env:
         OPENAI_API_KEY: ${{ inputs.openai_api_key }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
+        DEBUG: ${{ inputs.debug }}
       with:
           script: |
-            console.log("Initializing puLL-Merge")
+            const debug = process.env.DEBUG == 'true';
+            if (debug) console.log("Initializing puLL-Merge");
             const { default: explainPatch } = await import('${{ github.action_path }}/src/openaiExplainPatch.js')
 
             const watermark = `[puLL-Merge] - ${process.env.GITHUB_REPOSITORY}@${context.issue.number}`
@@ -72,7 +74,7 @@ runs:
                 }
               }`
 
-              console.log(`Deleting ${messages.length} message(s)`);
+              if (debug) console.log(`Deleting ${messages.length} message(s)`);
               for (var i = 0; i < messages.length; i++) {
                 if (messages[i].body.includes(watermark)) {
                   await github.graphql(deleteQuery, {id: messages[i].id});
@@ -87,5 +89,6 @@ runs:
               });
             } catch (error) {
               console.log(error);
+              if (debug) throw error;
             }
             
