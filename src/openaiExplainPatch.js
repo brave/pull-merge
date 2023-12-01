@@ -22,10 +22,18 @@ async function filterdiff({ content }) {
 }
 
 export default async function explainPatch({openaiKey, owner, repo, prnum,
-  githubToken=null, 
+  githubToken = null,
   github=null,
-  model="gpt-4-1106-preview",
-  system_prompt="Explain the patch:\n\n",
+  model = "gpt-4-1106-preview",
+  system_prompt = `
+  You are an expert software engineer reviewing a pull request on Github. Lines that start with "+" have been added, lines that start with "-" have been deleted. Use markdown for formatting your review.
+
+  Desired format:
+  #### Description
+  <description_of_PR> // How does this PR change the codebase? What is the motivation for this change?
+  #### Changes
+  <list_of_changes> // Describe the main changes in the PR, organizing them by filename
+  \n`,
   max_tokens=2048,
   temperature=1,
   top_p=1,
@@ -38,7 +46,7 @@ export default async function explainPatch({openaiKey, owner, repo, prnum,
 
   if (!github && githubToken) {
     const { Octokit } = await import("@octokit/core");
-    
+
     github = new Octokit({auth: githubToken})
   }
 
@@ -67,10 +75,16 @@ export default async function explainPatch({openaiKey, owner, repo, prnum,
   if (debug) {
     return "debug\n\n```\n"+patchBody+"\n```";
   }
-  
+
   if (enc.encode(patchBody).length < amplification*max_tokens)
     throw new Error("The patch is trivial, no need for a summarization");
-  
+
+  const user_prompt = `This is the PR diff\n\`\`\`\n${patchBody}\n\`\`\``;
+
+  if (debug) {
+    console.log(user_prompt)
+  }  
+
   const aiResponse = await openai.chat.completions.create({
     model: model,
     messages: [
@@ -80,7 +94,7 @@ export default async function explainPatch({openaiKey, owner, repo, prnum,
           },
           {
             "role": "user",
-            "content": patchBody
+            "content": user_prompt
           }
     ],
     temperature: temperature,
@@ -90,8 +104,10 @@ export default async function explainPatch({openaiKey, owner, repo, prnum,
     presence_penalty: presence_penalty,
   });
 
-  // console.log(aiResponse);
-  // console.log(aiResponse.choices[0].message);
+  if (debug) {
+    console.log(aiResponse);
+    console.log(aiResponse.choices[0].message);
+  }
 
   return aiResponse.choices[0].message.content;
 }
