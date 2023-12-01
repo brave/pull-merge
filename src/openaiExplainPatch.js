@@ -10,29 +10,34 @@ export default async function explainPatch({openaiKey, owner, repo, prnum,
   top_p=1,
   frequency_penalty=0,
   presence_penalty=0}) {
-
-  if (!github && !githubToken) throw RangeError("github and githubToken arguments cannot be both null");
-
   const openai = new OpenAI({apiKey: openaiKey});
 
-  if (!github) {
+  if (!github && githubToken) {
     const { Octokit } = await import("@octokit/core");
     
     github = new Octokit({auth: githubToken})
   }
 
-  const {data: patchBody} = await github.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
-    owner: owner,
-    repo: repo,
-    pull_number: prnum,
-    headers: {
-      'X-GitHub-Api-Version': '2022-11-28'
-    },
-    mediaType: {
-      format: "patch",
-    },
-  })
+  var patchBody = null;
 
+  if (!github && !githubToken) {
+    const patchResponse = await fetch(`https://github.com/${owner}/${repo}/pull/${prnum}.patch`);
+    patchBody = await patchResponse.text();
+  } else {
+    const {data: pBody} = await github.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
+      owner: owner,
+      repo: repo,
+      pull_number: prnum,
+      headers: {
+        'X-GitHub-Api-Version': '2022-11-28'
+      },
+      mediaType: {
+        format: "patch",
+      },
+    })
+    patchBody = pBody;
+  }
+  
   const aiResponse = await openai.chat.completions.create({
     model: model,
     messages: [
