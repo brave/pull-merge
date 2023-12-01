@@ -50,13 +50,13 @@ runs:
             function isOlderThanXHours(date, hours) {
               // Get the current date and time
               var now = new Date();
-                
+
               // Calculate the time difference in milliseconds
               var timeDiff = now - new Date(date);
-                
+
               // Convert the time difference to hours
               var timeDiffInHours = timeDiff / (1000 * 60 * 60);
-                
+              
               // Check if the time difference is greater than the specified number of hours
               return timeDiffInHours > hours;
             }
@@ -64,8 +64,8 @@ runs:
             const watermark = `[puLL-Merge] - ${process.env.GITHUB_REPOSITORY}@${context.issue.number}`
 
             try {
-              const query = `query($owner:String!, $name:String!, $prnumber:Int!) { 
-                repository(owner:$owner, name:$name) { 
+              const query = `query($owner:String!, $name:String!, $prnumber:Int!) {
+                repository(owner:$owner, name:$name) {
                   pullRequest(number:$prnumber) {
                     comments(last: 100) {
                       nodes {
@@ -120,4 +120,3 @@ runs:
               console.log(error);
               if (debug) throw error;
             }
-            
