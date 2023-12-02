@@ -1,4 +1,6 @@
 import OpenAI from "openai";
+import { encoding_for_model } from "tiktoken";
+
 
 export default async function explainPatch({openaiKey, owner, repo, prnum,
   githubToken=null, 
@@ -9,7 +11,9 @@ export default async function explainPatch({openaiKey, owner, repo, prnum,
   temperature=1,
   top_p=1,
   frequency_penalty=0,
-  presence_penalty=0}) {
+  presence_penalty=0,
+  amplification=4}) {
+  const enc = encoding_for_model(model);
   const openai = new OpenAI({apiKey: openaiKey});
 
   if (!github && githubToken) {
@@ -37,6 +41,9 @@ export default async function explainPatch({openaiKey, owner, repo, prnum,
     })
     patchBody = pBody;
   }
+  
+  if (enc.encode(patchBody).length < amplification*max_tokens)
+    throw new Error("The patch is trivial, no need for a summarization");
   
   const aiResponse = await openai.chat.completions.create({
     model: model,
