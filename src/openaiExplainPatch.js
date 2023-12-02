@@ -1,6 +1,25 @@
 import OpenAI from "openai";
 import { encoding_for_model } from "tiktoken";
+import { spawn } from "child_process";
 
+async function filterdiff({ content }) {
+    const cp = spawn('filterdiff', ['--strip=1', '--exclude=**/package-lock.json']);
+    const output = [];
+    const error = [];
+
+    cp.stdin.write(content);
+
+    cp.stdout.on('data', (data) => output.push(data));
+    cp.stderr.on('data', (data) => error.push(data));
+    cp.stdin.end();
+
+    await new Promise((resolve) => cp.on('close', resolve));
+
+    if (error.length > 0)
+        throw new Error(error.join());
+
+    return output.join();
+}
 
 export default async function explainPatch({openaiKey, owner, repo, prnum,
   githubToken=null, 
@@ -12,7 +31,8 @@ export default async function explainPatch({openaiKey, owner, repo, prnum,
   top_p=1,
   frequency_penalty=0,
   presence_penalty=0,
-  amplification=4}) {
+  amplification=4,
+  debug=false}) {
   const enc = encoding_for_model(model);
   const openai = new OpenAI({apiKey: openaiKey});
 
@@ -40,6 +60,12 @@ export default async function explainPatch({openaiKey, owner, repo, prnum,
       },
     })
     patchBody = pBody;
+  }
+
+  var patchBody = await filterdiff({content: patchBody});
+
+  if (debug) {
+    return "debug\n\n```\n"+patchBody+"\n```";
   }
   
   if (enc.encode(patchBody).length < amplification*max_tokens)
