@@ -21,7 +21,7 @@ export default async function explainPatch({openaiKey, owner, repo, prnum,
   var patchBody = null;
 
   if (!github && !githubToken) {
-    const patchResponse = await fetch(`https://github.com/${owner}/${repo}/pull/${prnum}.patch`);
+    const patchResponse = await fetch(`https://github.com/${owner}/${repo}/pull/${prnum}.diff`);
     patchBody = await patchResponse.text();
   } else {
     const {data: pBody} = await github.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
@@ -32,7 +32,7 @@ export default async function explainPatch({openaiKey, owner, repo, prnum,
         'X-GitHub-Api-Version': '2022-11-28'
       },
       mediaType: {
-        format: "patch",
+        format: "diff",
       },
     })
     patchBody = pBody;
