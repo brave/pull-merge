@@ -2,7 +2,10 @@ import OpenAI from "openai";
 import { encoding_for_model } from "tiktoken";
 import { spawn } from "child_process";
 
-async function filterdiff({ content }) {
+async function filterdiff({ content, args }) {
+    const realArgs = ['--strip=1'];
+    realArgs.push(...args);
+
     const cp = spawn('filterdiff', ['--strip=1', '--exclude=**/package-lock.json']);
     const output = [];
     const error = [];
@@ -42,8 +45,12 @@ Desired format:
   frequency_penalty=0,
   presence_penalty=0,
   amplification=4,
-  debug=false}) {
+  debug=false,
+  filterdiffArgs = ['--exclude=**/package-lock.json']}) {
   const openai = new OpenAI({apiKey: openaiKey});
+
+  const realModels = Array.isArray(models) ? models : models.split(" ");
+  const realFilterdiffArgs = Array.isArray(filterdiffArgs) ? filterdiffArgs : filterdiffArgs.split(" ");
 
   if (!github && githubToken) {
     const { Octokit } = await import("@octokit/core");
@@ -71,21 +78,17 @@ Desired format:
     patchBody = pBody;
   }
 
-  var patchBody = await filterdiff({content: patchBody});
-
-  if (debug) {
-    return "debug\n\n```\n"+patchBody+"\n```";
-  }
+  var patchBody = await filterdiff({content: patchBody, args: realFilterdiffArgs});
 
   const user_prompt = `This is the PR diff\n\`\`\`\n${patchBody}\n\`\`\``;
 
   if (debug) {
-    console.log(user_prompt)
+    console.log(`user_prompt:\n\n${user_prompt}`);
   }
 
-  for (let i = 0; i < models.length; i++)
+  for (let i = 0; i < realModels.length; i++)
     try {
-      let m = models[i];
+      let m = realModels[i];
       let enc = encoding_for_model(m);
       if (enc.encode(patchBody).length < amplification*max_tokens)
         throw new Error("The patch is trivial, no need for a summarization");  
@@ -109,7 +112,7 @@ Desired format:
       });
       break;
     } catch (e) {
-      if (i+1 == models.length) // last model
+      if (i+1 == realModels.length) // last model
         throw e;
 
       console.log(e);
