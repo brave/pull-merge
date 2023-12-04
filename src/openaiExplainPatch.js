@@ -26,14 +26,16 @@ export default async function explainPatch({openaiKey, owner, repo, prnum,
   github=null,
   model = "gpt-4-1106-preview",
   system_prompt = `
-  You are an expert software engineer reviewing a pull request on Github. Lines that start with "+" have been added, lines that start with "-" have been deleted. Use markdown for formatting your review.
+You are an expert software engineer reviewing a pull request on Github. Lines that start with "+" have been added, lines that start with "-" have been deleted. Use markdown for formatting your review.
 
-  Desired format:
-  #### Description
-  <description_of_PR> // How does this PR change the codebase? What is the motivation for this change?
-  #### Changes
-  <list_of_changes> // Describe the main changes in the PR, organizing them by filename
-  \n`,
+Desired format:
+### Description
+<description_of_PR> // How does this PR change the codebase? What is the motivation for this change?
+### Changes
+<list_of_changes> // Describe the main changes in the PR, organizing them by filename
+### Security Hotspots
+<list_of_security_hotspots> // Describe locations for possible vulnerabilities in the change, order by risk
+\n`,
   max_tokens=2048,
   temperature=1,
   top_p=1,
