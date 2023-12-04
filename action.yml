@@ -13,6 +13,14 @@ inputs:
     description: |
       Debounce Time in hours
     default: "6"
+  amplification:
+    description: |
+      Amplification factor for the generated text
+    default: "4"
+  filterdiff_args:
+    description: |
+      Arguments to pass to filterdiff
+    default: --exclude=**/package-lock.json
   debug:
     description: enables debug output for this action
     required: false
@@ -40,6 +48,8 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github_token }}
         DEBUG: ${{ inputs.debug }}
         DEBOUNCE_TIME: ${{ inputs.debounce_time }}
+        AMPLIFICATION: ${{ inputs.amplification }}
+        FILTERDIFF_ARGS: ${{ inputs.filterdiff_args }}
       with:
           script: |
             const debug = process.env.DEBUG == 'true';
@@ -56,7 +66,7 @@ runs:
 
               // Convert the time difference to hours
               var timeDiffInHours = timeDiff / (1000 * 60 * 60);
-              
+
               // Check if the time difference is greater than the specified number of hours
               return timeDiffInHours > hours;
             }
@@ -108,7 +118,9 @@ runs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 prnum: context.issue.number,
-                debug: debug }));
+                debug: debug,
+                amplification: parseInt(process.env.AMPLIFICATION, 10),
+                filterdiffArgs: process.env.FILTERDIFF_ARGS }));
 
               github.rest.issues.createComment({
                 owner: context.repo.owner,
