@@ -116,6 +116,13 @@ runs:
                 issue_number: context.issue.number,
                 body: patchExplained
               });
+
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: ["puLL-Merge"],
+              });
             } catch (error) {
               console.log(error);
               if (debug) throw error;
