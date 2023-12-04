@@ -24,7 +24,7 @@ async function filterdiff({ content }) {
 export default async function explainPatch({openaiKey, owner, repo, prnum,
   githubToken = null,
   github=null,
-  model = "gpt-4-1106-preview",
+  models = ["gpt-4-1106-preview", "gpt-3.5-turbo-16k-0613"],
   system_prompt = `
 You are an expert software engineer reviewing a pull request on Github. Lines that start with "+" have been added, lines that start with "-" have been deleted. Use markdown for formatting your review.
 
@@ -43,7 +43,6 @@ Desired format:
   presence_penalty=0,
   amplification=4,
   debug=false}) {
-  const enc = encoding_for_model(model);
   const openai = new OpenAI({apiKey: openaiKey});
 
   if (!github && githubToken) {
@@ -78,33 +77,43 @@ Desired format:
     return "debug\n\n```\n"+patchBody+"\n```";
   }
 
-  if (enc.encode(patchBody).length < amplification*max_tokens)
-    throw new Error("The patch is trivial, no need for a summarization");
-
   const user_prompt = `This is the PR diff\n\`\`\`\n${patchBody}\n\`\`\``;
 
   if (debug) {
     console.log(user_prompt)
-  }  
+  }
 
-  const aiResponse = await openai.chat.completions.create({
-    model: model,
-    messages: [
-          {
-            "role": "system",
-            "content": system_prompt,
-          },
-          {
-            "role": "user",
-            "content": user_prompt
-          }
-    ],
-    temperature: temperature,
-    max_tokens: max_tokens,
-    top_p: top_p,
-    frequency_penalty: frequency_penalty,
-    presence_penalty: presence_penalty,
-  });
+  for (i = 0; i < models.length; i++)
+    try {
+      let m = models[i];
+      let enc = encoding_for_model(m);
+      if (enc.encode(patchBody).length < amplification*max_tokens)
+        throw new Error("The patch is trivial, no need for a summarization");  
+      var aiResponse = await openai.chat.completions.create({
+        model: m,
+        messages: [
+              {
+                "role": "system",
+                "content": system_prompt,
+              },
+              {
+                "role": "user",
+                "content": user_prompt
+              }
+        ],
+        temperature: temperature,
+        max_tokens: max_tokens,
+        top_p: top_p,
+        frequency_penalty: frequency_penalty,
+        presence_penalty: presence_penalty,
+      });
+    } catch (e) {
+      if (i+1 == models.length) // last model
+        throw e;
+
+      console.log(e);
+      continue;
+    }
 
   if (debug) {
     console.log(aiResponse);
