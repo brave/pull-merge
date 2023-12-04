@@ -107,6 +107,7 @@ Desired format:
         frequency_penalty: frequency_penalty,
         presence_penalty: presence_penalty,
       });
+      break;
     } catch (e) {
       if (i+1 == models.length) // last model
         throw e;
