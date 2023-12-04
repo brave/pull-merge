@@ -83,7 +83,7 @@ Desired format:
     console.log(user_prompt)
   }
 
-  for (i = 0; i < models.length; i++)
+  for (let i = 0; i < models.length; i++)
     try {
       let m = models[i];
       let enc = encoding_for_model(m);
