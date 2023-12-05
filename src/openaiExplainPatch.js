@@ -27,7 +27,7 @@ async function filterdiff({ content, args }) {
 export default async function explainPatch({openaiKey, owner, repo, prnum,
   githubToken = null,
   github=null,
-  models = ["gpt-4-1106-preview", "gpt-3.5-turbo-16k-0613"],
+  models = ["gpt-4-1106-preview", "gpt-3.5-turbo-1106"],
   system_prompt = `
 You are an expert software engineer reviewing a pull request on Github. Lines that start with "+" have been added, lines that start with "-" have been deleted. Use markdown for formatting your review.
 

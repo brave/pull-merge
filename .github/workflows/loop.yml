@@ -21,4 +21,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           openai_api_key: ${{ secrets.OPENAI_API_KEY }}
           amplification: 0 # always trigger the action
-          openapi_models: gpt-3.5-turbo-16k-0613 # cheap model for testing
+          openapi_models: gpt-3.5-turbo-1106 # cheap model for testing
