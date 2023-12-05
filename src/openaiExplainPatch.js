@@ -80,7 +80,7 @@ Desired format:
 
   var patchBody = await filterdiff({content: patchBody, args: realFilterdiffArgs});
 
-  const user_prompt = `This is the PR diff\n\`\`\`\n${patchBody}\n\`\`\``;
+  const user_prompt = `Repository: https://github.com/${owner}/${repo}\n\nThis is the PR diff\n\`\`\`\n${patchBody}\n\`\`\``;
 
   if (debug) {
     console.log(`user_prompt:\n\n${user_prompt}`);
