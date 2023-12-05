@@ -21,6 +21,10 @@ inputs:
     description: |
       Arguments to pass to filterdiff
     default: --exclude=**/package-lock.json
+  openapi_models:
+    description: |
+      selection of models to use for the openapi endpoint
+    default: gpt-4-1106-preview gpt-3.5-turbo-16k-0613
   debug:
     description: enables debug output for this action
     required: false
@@ -50,6 +54,7 @@ runs:
         DEBOUNCE_TIME: ${{ inputs.debounce_time }}
         AMPLIFICATION: ${{ inputs.amplification }}
         FILTERDIFF_ARGS: ${{ inputs.filterdiff_args }}
+        OPENAPI_MODELS: ${{ inputs.openapi_models }}
       with:
           script: |
             const debug = process.env.DEBUG == 'true';
@@ -119,6 +124,7 @@ runs:
                 repo: context.repo.repo,
                 prnum: context.issue.number,
                 debug: debug,
+                models: process.env.OPENAPI_MODELS.split(" "),
                 amplification: parseInt(process.env.AMPLIFICATION, 10),
                 filterdiffArgs: process.env.FILTERDIFF_ARGS }));
 
