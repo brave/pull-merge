@@ -1,6 +1,6 @@
 # ![pull-merge](/logo/svg/logo-no-background.svg)
 
-puLL-Merge is a `github-action` to add LLM capabilities to pull-requests in `github` automatically
+puLL-Merge is a `github-action` to add LLM capabilities to pull-requests in `github`
 
 ## Usage
 
@@ -21,7 +21,7 @@ jobs:
       - uses: brave/pull-merge@main
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          openai_key: ${{ secrets.OPENAI_KEY }}
+          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
 
 ```
 
