@@ -46,7 +46,7 @@ runs:
       shell: bash
     - id: llm-and-post-message
       uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-      if: ${{ inputs.openai_api_key != '' && !contains(github.event.pull_request.labels.*.name, 'CI/skip-llm') && !contains(github.event.pull_request.labels.*.name, 'CI/skip') && github.event.pull_request.draft == false && !endsWith(github.actor, '[bot]') }}
+      if: ${{ !contains(github.event.pull_request.labels.*.name, 'CI/skip-llm') && !contains(github.event.pull_request.labels.*.name, 'CI/skip') && github.event.pull_request.draft == false }}
       env:
         OPENAI_API_KEY: ${{ inputs.openai_api_key }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
