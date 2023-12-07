@@ -21,9 +21,9 @@ inputs:
     description: |
       Arguments to pass to filterdiff
     default: --exclude=**/package-lock.json
-  openapi_models:
+  openai_models:
     description: |
-      selection of models to use for the openapi endpoint
+      selection of models to use for the openai endpoint
     default: gpt-4-1106-preview gpt-3.5-turbo-16k-0613
   debug:
     description: enables debug output for this action
@@ -54,12 +54,33 @@ runs:
         DEBOUNCE_TIME: ${{ inputs.debounce_time }}
         AMPLIFICATION: ${{ inputs.amplification }}
         FILTERDIFF_ARGS: ${{ inputs.filterdiff_args }}
-        OPENAPI_MODELS: ${{ inputs.openapi_models }}
+        OPENAI_MODELS: ${{ inputs.openai_models }}
       with:
           script: |
-            const debug = process.env.DEBUG == 'true';
+            var debug = process.env.DEBUG == 'true';
             if (debug) console.log("Initializing puLL-Merge");
-            const debounceHours = parseInt(process.env.DEBOUNCE_TIME, 10);
+
+            async function getConfig(repo, owner, path) {
+              try {
+                const { data } = await github.rest.repos.getContent({
+                  owner,
+                  repo,
+                  path,
+                });
+                const fileContent = Buffer.from(data.content, 'base64').toString('utf8');
+                if (debug) console.log(fileContent);
+                return JSON.parse(fileContent);
+              } catch (err) {
+                console.log(err);
+                return {};
+              }
+            }
+
+            let options = await getConfig(context.repo.repo, context.repo.owner, '.github/pull-merge.json');
+            
+            debug = options.debug ? (options.debug == 'true') : debug;
+
+            const debounceHours = parseInt(options.debounce_time || process.env.DEBOUNCE_TIME, 10);
             const { default: explainPatch } = await import('${{ github.action_path }}/src/openaiExplainPatch.js');
 
             function isOlderThanXHours(date, hours) {
@@ -118,15 +139,15 @@ runs:
               }
 
               const patchExplained = watermark+"\n\n"+(await explainPatch({
-                openaiKey: process.env.OPENAI_API_KEY,
+                openaiKey: options.openai_api_key || process.env.OPENAI_API_KEY,
                 github: github,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 prnum: context.issue.number,
                 debug: debug,
-                models: process.env.OPENAPI_MODELS.split(" "),
-                amplification: parseInt(process.env.AMPLIFICATION, 10),
-                filterdiffArgs: process.env.FILTERDIFF_ARGS }));
+                models: (options.openai_models || process.env.OPENAI_MODELS).split(" "),
+                amplification: parseInt(options.amplification || process.env.AMPLIFICATION, 10),
+                filterdiffArgs: options.filterdiff_args || process.env.FILTERDIFF_ARGS }));
 
               github.rest.issues.createComment({
                 owner: context.repo.owner,
