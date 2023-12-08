@@ -6,7 +6,7 @@ async function filterdiff({ content, args }) {
     const realArgs = ['--strip=1'];
     realArgs.push(...args);
 
-    const cp = spawn('filterdiff', ['--strip=1', '--exclude=**/package-lock.json']);
+    const cp = spawn('filterdiff', realArgs);
     const output = [];
     const error = [];
 
