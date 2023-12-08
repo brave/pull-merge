@@ -105,6 +105,13 @@ runs:
             
             debug = options.debug ? (options.debug == 'true') : debug;
 
+            if (debug) {
+              console.log(`Using options: ${JSON.stringify(options)}`);
+              console.log(`Using config: ${JSON.stringify(config)}`);
+              console.log(`Using properties: ${JSON.stringify(properties)}`);
+              console.log(`Using inputs: ${JSON.stringify(inputs)}`);
+            }            
+
             const debounceHours = parseInt(options.debounce_time, 10);
             const { default: explainPatch } = await import('${{ github.action_path }}/src/openaiExplainPatch.js');
 
