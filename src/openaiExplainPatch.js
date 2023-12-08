@@ -2,10 +2,12 @@ import OpenAI from "openai";
 import { encoding_for_model } from "tiktoken";
 import { spawn } from "child_process";
 
-async function filterdiff({ content, args }) {
+async function filterdiff({ content, args, debug }) {
     const realArgs = ['--strip=1'];
     if (args.length > 0)
       realArgs.push(...args);
+
+    if (debug) console.log(`filterdiff ${realArgs.join(" ")}`);
 
     const cp = spawn('filterdiff', realArgs);
     const output = [];
@@ -61,6 +63,8 @@ Desired format:
   const realModels = Array.isArray(models) ? models : models.split(" ");
   const realFilterdiffArgs = Array.isArray(filterdiffArgs) ? filterdiffArgs : filterdiffArgs.split(" ").filter((arg) => arg != "");;
 
+  if (debug) console.log(`realFilterdiffArgs: ${realFilterdiffArgs.join(" ")}`);
+
   if (!github && githubToken) {
     const { Octokit } = await import("@octokit/core");
 
@@ -104,7 +108,7 @@ Desired format:
     patchBody = pBody;
   }
 
-  var patchBody = await filterdiff({content: patchBody, args: realFilterdiffArgs});
+  var patchBody = await filterdiff({content: patchBody, args: realFilterdiffArgs, debug: debug});
 
   const user_prompt = `Repository: https://github.com/${owner}/${repo}\n\nThis is the PR diff\n\`\`\`\n${patchBody}\n\`\`\``;
 
