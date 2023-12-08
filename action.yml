@@ -12,19 +12,15 @@ inputs:
   debounce_time:
     description: |
       Debounce Time in hours
-    default: "6"
   amplification:
     description: |
       Amplification factor for the generated text
-    default: "4"
   filterdiff_args:
     description: |
       Arguments to pass to filterdiff
-    default: --exclude=**/package-lock.json
   openai_models:
     description: |
       selection of models to use for the openai endpoint
-    default: gpt-4-1106-preview gpt-3.5-turbo-16k-0613
   run_if_private:
     description: |
       run the action even if the repository is private
@@ -56,6 +52,9 @@ runs:
       with:
           script: |
             const inputs = ${{ toJson(inputs) }};
+            // delete if empty string in inputs value
+            Object.keys(inputs).forEach(key => inputs[key] === '' && delete inputs[key]);
+            
             var debug = process.env.DEBUG == 'true';
             if (debug) console.log("Initializing puLL-Merge");
 
@@ -97,7 +96,12 @@ runs:
 
             let config = await getConfig(context.repo.owner, context.repo.repo, '.github/pull-merge.json');
             let properties = await getProperties(context.repo.owner, context.repo.repo);
-            let options = Object.assign({}, config, properties, inputs);
+            let options = Object.assign({
+              "debounce_time": "6",
+              "amplification": "4",
+              "filterdiff_args": "--exclude=**/package-lock.json",
+              "openai_models": "gpt-3.5-turbo-16k-0613",
+            }, config, properties, inputs);
             
             debug = options.debug ? (options.debug == 'true') : debug;
 
