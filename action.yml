@@ -60,7 +60,7 @@ runs:
             var debug = process.env.DEBUG == 'true';
             if (debug) console.log("Initializing puLL-Merge");
 
-            async function getConfig(repo, owner, path) {
+            async function getConfig(owner, repo, path) {
               try {
                 const { data } = await github.rest.repos.getContent({
                   owner,
@@ -71,12 +71,12 @@ runs:
                 if (debug) console.log(fileContent);
                 return JSON.parse(fileContent);
               } catch (err) {
-                console.log(err);
+                if (debug) console.log(err);
                 return {};
               }
             }
 
-            let options = await getConfig(context.repo.repo, context.repo.owner, '.github/pull-merge.json');
+            let options = await getConfig(context.repo.owner, context.repo.repo, '.github/pull-merge.json');
             
             debug = options.debug ? (options.debug == 'true') : debug;
 
