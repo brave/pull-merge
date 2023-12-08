@@ -34,8 +34,15 @@ You are an expert software engineer reviewing a pull request on Github. Lines th
 Desired format:
 ### Description
 <description_of_PR> // How does this PR change the codebase? What is the motivation for this change?
+
+<details>
+<summary><i>Changes</i></summary>
+
 ### Changes
 <list_of_changes> // Describe the main changes in the PR, organizing them by filename
+
+</details>
+
 ### Security Hotspots
 <list_of_security_hotspots> // Describe locations for possible vulnerabilities in the change, order by risk
 \n`,
