@@ -25,6 +25,9 @@ inputs:
     description: |
       selection of models to use for the openai endpoint
     default: gpt-4-1106-preview gpt-3.5-turbo-16k-0613
+  run_if_private:
+    description: |
+      run the action even if the repository is private
   debug:
     description: enables debug output for this action
     required: false
@@ -165,7 +168,8 @@ runs:
                 debug: debug,
                 models: options.openai_models.split(" "),
                 amplification: parseInt(options.amplification, 10),
-                filterdiffArgs: options.filterdiff_args }));
+                filterdiffArgs: options.filterdiff_args,
+                runIfPrivate: options.run_if_private }));
 
               github.rest.issues.createComment({
                 owner: context.repo.owner,
