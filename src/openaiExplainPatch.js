@@ -4,7 +4,8 @@ import { spawn } from "child_process";
 
 async function filterdiff({ content, args }) {
     const realArgs = ['--strip=1'];
-    realArgs.push(...args);
+    if (args.length > 0)
+      realArgs.push(...args);
 
     const cp = spawn('filterdiff', realArgs);
     const output = [];
@@ -27,7 +28,7 @@ async function filterdiff({ content, args }) {
 export default async function explainPatch({openaiKey, owner, repo, prnum,
   githubToken = null,
   github=null,
-  models = ["gpt-4-1106-preview", "gpt-3.5-turbo-1106"],
+  models = ["gpt-3.5-turbo-1106"],
   system_prompt = `
 You are an expert software engineer reviewing a pull request on Github. Lines that start with "+" have been added, lines that start with "-" have been deleted. Use markdown for formatting your review.
 
@@ -51,14 +52,14 @@ Desired format:
   top_p=1,
   frequency_penalty=0,
   presence_penalty=0,
-  amplification=4,
+  amplification=2,
   debug=false,
   runIfPrivate=false,
   filterdiffArgs = ['--exclude=**/package-lock.json']}) {
   const openai = new OpenAI({apiKey: openaiKey});
 
   const realModels = Array.isArray(models) ? models : models.split(" ");
-  const realFilterdiffArgs = Array.isArray(filterdiffArgs) ? filterdiffArgs : filterdiffArgs.split(" ");
+  const realFilterdiffArgs = Array.isArray(filterdiffArgs) ? filterdiffArgs : filterdiffArgs.split(" ").filter((arg) => arg != "");;
 
   if (!github && githubToken) {
     const { Octokit } = await import("@octokit/core");
