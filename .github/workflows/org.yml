@@ -7,6 +7,9 @@ permissions:
   pull-requests: write
 jobs:
   pull-merge:
+    concurrency:
+      group: ${{ github.head_ref }}-init
+      cancel-in-progress: true
     name: puLL-Merge
     runs-on: ubuntu-latest
     strategy:
