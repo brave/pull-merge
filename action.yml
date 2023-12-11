@@ -39,6 +39,10 @@ inputs:
     description: |
       force the pull request number to run the action on
     required: false
+  max_tokens:
+    description: |
+      maximum number of tokens to generate
+    required: false
 # outputs:
 runs:
   using: 'composite'
@@ -115,12 +119,14 @@ runs:
               "owner": context.repo.owner,
               "repo": context.repo.repo,
               "prnum": context.issue.number,
+              "max_tokens": "2048",
             }, config, properties, inputs);
 
             // convert to numbers some options
-            options.debounce_time = parseInt(options.debounce_time, 10);
-            options.amplification = parseInt(options.amplification, 10);
-            options.prnum = parseInt(options.prnum, 10);
+            options.debounce_time = parseFloat(options.debounce_time, 10);
+            options.amplification = parseFloat(options.amplification, 10);
+            options.prnum = parseFloat(options.prnum, 10);
+            options.max_tokens = parseFloat(options.max_tokens, 10);
             
             debug = options.debug ? (options.debug == 'true') : debug;
 
@@ -198,7 +204,8 @@ runs:
                 models: options.openai_models.split(" "),
                 amplification: options.amplification,
                 filterdiffArgs: options.filterdiff_args,
-                runIfPrivate: options.run_if_private }));
+                runIfPrivate: options.run_if_private,
+                max_tokens: options.max_tokens}));
 
               github.rest.issues.createComment({
                 owner: options.owner,
