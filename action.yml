@@ -116,6 +116,11 @@ runs:
               "repo": context.repo.repo,
               "prnum": context.issue.number,
             }, config, properties, inputs);
+
+            // convert to numbers some options
+            options.debounce_time = parseInt(options.debounce_time, 10);
+            options.amplification = parseInt(options.amplification, 10);
+            options.prnum = parseInt(options.prnum, 10);
             
             debug = options.debug ? (options.debug == 'true') : debug;
 
@@ -126,7 +131,6 @@ runs:
               console.log(`Using inputs: ${JSON.stringify(inputs)}`);
             }            
 
-            const debounceHours = parseInt(options.debounce_time, 10);
             const { default: explainPatch } = await import('${{ github.action_path }}/src/openaiExplainPatch.js');
 
             function isOlderThanXHours(date, hours) {
@@ -167,7 +171,7 @@ runs:
               }
               const messages = (await github.graphql(query, variables)).repository.pullRequest.comments.nodes;
 
-              if (messages.some(msg => msg.body.includes(watermark) && !isOlderThanXHours(msg.updatedAt, debounceHours))) {
+              if (messages.some(msg => msg.body.includes(watermark) && !isOlderThanXHours(msg.updatedAt, options.debounce_time))) {
                 throw new Error("debounce");
               }
 
@@ -192,7 +196,7 @@ runs:
                 prnum: options.prnum,
                 debug: debug,
                 models: options.openai_models.split(" "),
-                amplification: parseInt(options.amplification, 10),
+                amplification: options.amplification,
                 filterdiffArgs: options.filterdiff_args,
                 runIfPrivate: options.run_if_private }));
 
