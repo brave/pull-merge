@@ -27,7 +27,18 @@ inputs:
   debug:
     description: enables debug output for this action
     required: false
-
+  repo:
+    description: |
+      force the repository to run the action on
+    required: false
+  owner:
+    description: |
+      force the owner to run the action on
+    required: false
+  prnum:
+    description: |
+      force the pull request number to run the action on
+    required: false
 # outputs:
 runs:
   using: 'composite'
@@ -101,6 +112,9 @@ runs:
               "amplification": "4",
               "filterdiff_args": "--exclude=**/package-lock.json",
               "openai_models": "gpt-3.5-turbo-16k-0613",
+              "owner": context.repo.owner,
+              "repo": context.repo.repo,
+              "prnum": context.issue.number,
             }, config, properties, inputs);
             
             debug = options.debug ? (options.debug == 'true') : debug;
@@ -147,9 +161,9 @@ runs:
                 }
               }`;
               const variables = {
-                owner: context.repo.owner,
-                name: context.repo.repo,
-                prnumber: context.issue.number
+                owner: options.owner,
+                name: options.repo,
+                prnumber: options.prnum,
               }
               const messages = (await github.graphql(query, variables)).repository.pullRequest.comments.nodes;
 
@@ -173,9 +187,9 @@ runs:
               const patchExplained = watermark+"\n\n"+(await explainPatch({
                 openaiKey: options.openai_api_key,
                 github: github,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                prnum: context.issue.number,
+                owner: options.owner,
+                repo: options.repo,
+                prnum: options.prnum,
                 debug: debug,
                 models: options.openai_models.split(" "),
                 amplification: parseInt(options.amplification, 10),
@@ -183,16 +197,16 @@ runs:
                 runIfPrivate: options.run_if_private }));
 
               github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
+                owner: options.owner,
+                repo: options.repo,
+                issue_number: options.prnum,
                 body: patchExplained
               });
 
               await github.rest.issues.addLabels({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
+                owner: options.owner,
+                repo: options.repo,
+                issue_number: options.prnum,
                 labels: ["puLL-Merge"],
               });
             } catch (error) {
