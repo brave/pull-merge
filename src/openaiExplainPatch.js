@@ -117,7 +117,10 @@ Desired format:
     try {
       m = realModels[i];
       let enc = encoding_for_model(m);
-      if (enc.encode(patchBody).length < amplification*max_tokens)
+      let pLen = enc.encode(patchBody).length;
+      if (pLen == 0)
+        throw new Error("The patch is empty, cannot summarize!");
+      if (pLen < amplification*max_tokens)
         throw new Error("The patch is trivial, no need for a summarization");  
       var aiResponse = await openai.chat.completions.create({
         model: m,
