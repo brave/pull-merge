@@ -70,6 +70,7 @@ runs:
             const { default: filterdiff } = await import('${{ github.action_path }}/src/filterdiff.js');
             const { default: getPatch } = await import('${{ github.action_path }}/src/getPatch.js');
             const { default: getRenovatePatch } = await import('${{ github.action_path }}/src/getRenovatePatch.js');
+            const { default: getDependabotPatch } = await import('${{ github.action_path }}/src/getDependabotPatch.js');
             const { default: getConfig } = await import('${{ github.action_path }}/src/getConfig.js');
             const { default: getProperties } = await import('${{ github.action_path }}/src/getProperties.js');
             
@@ -169,6 +170,13 @@ runs:
               let patchBody = "";
               if ((context.payload.pull_request && context.payload.pull_request.user.login === 'renovate[bot]') || context.actor === 'renovate[bot]') {
                 patchBody = await getRenovatePatch({
+                  owner: options.owner,
+                  repo: options.repo,
+                  prnum: options.prnum,
+                  debug: debug,
+                  github: github});
+              } else if ((context.payload.pull_request && context.payload.pull_request.user.login === 'dependabot[bot]') || context.actor === 'dependabot[bot]') {
+                patchBody = await getDependabotPatch({
                   owner: options.owner,
                   repo: options.repo,
                   prnum: options.prnum,
