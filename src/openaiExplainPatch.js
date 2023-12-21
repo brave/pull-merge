@@ -1,35 +1,7 @@
 import OpenAI from "openai";
 import { encoding_for_model } from "tiktoken";
-import { spawn } from "child_process";
 
-async function filterdiff({ content, args, debug }) {
-    const realArgs = ['--strip=1'];
-    if (args.length > 0)
-      realArgs.push(...args);
-
-    if (debug) console.log(`filterdiff ${realArgs.join(" ")}`);
-
-    const cp = spawn('filterdiff', realArgs);
-    const output = [];
-    const error = [];
-
-    cp.stdin.write(content);
-
-    cp.stdout.on('data', (data) => output.push(data));
-    cp.stderr.on('data', (data) => error.push(data));
-    cp.stdin.end();
-
-    await new Promise((resolve) => cp.on('close', resolve));
-
-    if (error.length > 0)
-        throw new Error(error.join());
-
-    return output.join();
-}
-
-export default async function explainPatch({openaiKey, owner, repo, prnum,
-  githubToken = null,
-  github=null,
+export default async function explainPatch({openaiKey, patchBody, owner, repo,
   models = ["gpt-3.5-turbo-1106"],
   system_prompt = `
 You are an expert software engineer reviewing a pull request on Github. Lines that start with "+" have been added, lines that start with "-" have been deleted. Use markdown for formatting your review.
@@ -50,61 +22,9 @@ Desired format:
   frequency_penalty=0,
   presence_penalty=0,
   amplification=2,
-  debug=false,
-  runIfPrivate=false,
-  filterdiffArgs = ['--exclude=**/package-lock.json']}) {
+  debug=false}) {
   const openai = new OpenAI({apiKey: openaiKey});
-
   const realModels = Array.isArray(models) ? models : models.split(" ");
-  const realFilterdiffArgs = Array.isArray(filterdiffArgs) ? filterdiffArgs : filterdiffArgs.split(" ").filter((arg) => arg != "");;
-
-  if (debug) console.log(`realFilterdiffArgs: ${realFilterdiffArgs.join(" ")}`);
-
-  if (!github && githubToken) {
-    const { Octokit } = await import("@octokit/core");
-
-    github = new Octokit({auth: githubToken})
-  }
-
-  var patchBody = null;
-
-  if (!github && !githubToken) {
-    const patchResponse = await fetch(`https://github.com/${owner}/${repo}/pull/${prnum}.diff`);
-
-    if (patchResponse.status != 200)
-      throw new Error(`Could not fetch PR diff: ${patchResponse.status} ${patchResponse.statusText}`);
-
-    patchBody = await patchResponse.text();
-  } else {
-    const {data: pBody} = await github.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
-      owner: owner,
-      repo: repo,
-      pull_number: prnum,
-      headers: {
-        'X-GitHub-Api-Version': '2022-11-28'
-      },
-      mediaType: {
-        format: "diff",
-      },
-    })
-
-    const {data: repoResponse} = await github.request('GET /repos/{owner}/{repo}', {
-      owner: owner,
-      repo: repo,
-      pull_number: prnum,
-      headers: {
-        'X-GitHub-Api-Version': '2022-11-28'
-      }
-    })
-
-    if (!runIfPrivate && (repoResponse.private || repoResponse.visibility == "private"))
-      throw new Error("This repo is private, and you have not enabled runIfPrivate");
-
-    patchBody = pBody;
-  }
-
-  var patchBody = await filterdiff({content: patchBody, args: realFilterdiffArgs, debug: debug});
-
   const user_prompt = `Repository: https://github.com/${owner}/${repo}\n\nThis is the PR diff\n\`\`\`\n${patchBody}\n\`\`\``;
 
   if (debug) {
