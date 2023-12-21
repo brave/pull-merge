@@ -47,14 +47,40 @@ export default async function getRenovatePatch({ owner, repo, prnum,
     versions = markdownToTxt(versions);
 
     link = link.replace(/^.*https:\/\/to/, 'https://').replace(/\).*$/, '').replace(/\/releases$/, '');
-    versions = versions.split(/[^0-9\.]/).filter(Boolean).map(x => `v${x}`).join("..");
+
+    // get last two elements of an array
+    const [tOrg, tRepo] = link.split('/').filter(Boolean).slice(-2);
+    const [from, to] = versions.split(/[^0-9\.]/).filter(Boolean);
+
+    // list matching references
+    const tagsQuery = `query Tags($owner:String!, $name:String!) {
+        repository(owner: $owner, name: $name) {
+            refs(refPrefix: "refs/tags/", last: 100) {
+                nodes {
+                    name
+                }
+            }
+        }
+    }`;
+    const tagsVariables = {
+        owner: tOrg,
+        name: tRepo,
+    };
+
+    const tags = (await github.graphql(tagsQuery, tagsVariables)).repository.refs.nodes.map(x => x.name);
+
+    if (debug)
+        console.log(tags);
+
+    const fromFiltered = tags.filter(x => x.endsWith(from))[0];
+    const toFiltered = tags.filter(x => x.endsWith(to))[0];
 
     if (debug) {
         console.log(`sixthLine: ${sixthLine}`);
         console.log(`link: ${link}, versions: ${versions}`);
     }
 
-    const patchResponse = await fetch(`${link}/compare/${versions}.diff`);
+    const patchResponse = await fetch(`${link}/compare/${fromFiltered}..${toFiltered}.diff`);
 
     if (patchResponse.status != 200)
         throw new Error(`Could not fetch PR diff: ${patchResponse.status} ${patchResponse.statusText}`);
