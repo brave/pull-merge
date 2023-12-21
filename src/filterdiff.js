@@ -1,6 +1,6 @@
 import { spawn } from "child_process";
 
-export default async function filterdiff({ content, args=['--exclude=**/package-lock.json'], debug }) {
+export default async function filterdiff({ content, args=['--exclude=**/package-lock.json', '--exclude=**/yarn.lock'], debug }) {
     const realArgs = ['--strip=1'];
     if (args.length > 0)
       realArgs.push(...args);
