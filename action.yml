@@ -78,7 +78,7 @@ runs:
             // delete if empty string in inputs value
             Object.keys(inputs).forEach(key => inputs[key] === '' && delete inputs[key]);
             
-            var debug = process.env.DEBUG == 'true';
+            var debug = process.env.DEBUG == 'true' || context.runner.debug;
             if (debug) console.log("Initializing puLL-Merge");
 
             let config = await getConfig({owner: context.repo.owner, repo: context.repo.repo, path: '.github/pull-merge.json', debug, github});
