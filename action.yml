@@ -63,7 +63,7 @@ runs:
       if: ${{ !contains(github.event.pull_request.labels.*.name, 'CI/skip-llm') && !contains(github.event.pull_request.labels.*.name, 'CI/skip') && github.event.pull_request.draft == false }}
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
-        DEBUG: ${{ inputs.debug }}
+        DEBUG: ${{ (inputs.debug == 'true' || runner.debug) && 'true' || 'false'}}
       with:
           script: |
             const { default: explainPatch } = await import('${{ github.action_path }}/src/openaiExplainPatch.js');
