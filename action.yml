@@ -87,7 +87,7 @@ runs:
             let options = Object.assign({
               "debounce_time": "6",
               "amplification": "4",
-              "filterdiff_args": "--exclude=**/package-lock.json",
+              "filterdiff_args": "--exclude=**/package-lock.json --exclude=**/yarn.lock",
               "openai_models": "gpt-3.5-turbo-16k-0613",
               "owner": context.repo.owner,
               "repo": context.repo.repo,
@@ -194,7 +194,7 @@ runs:
 
               const filteredPatch = await filterdiff({
                 content: patchBody,
-                filterdiffArgs: options.filterdiff_args,
+                args: options.filterdiff_args,
                 debug: debug});
 
               if (debug) console.log(`\n\nOriginal patch:\n${patchBody}\n\nFiltered patch:\n${filteredPatch}\n\n`);
