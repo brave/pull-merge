@@ -79,7 +79,7 @@ export default async function getDependabotPatch({ owner, repo, prnum,
 
         return {
             type: "dependabot",
-            body: patchResponse.text(),
+            body: await patchResponse.text(),
             watermark: `[[puLL-Merge](https://github.com/brave/pull-merge)] - [${tOrg}/${tRepo}@${fromFiltered}..${toFiltered}](${patchLink})`
         };
     }

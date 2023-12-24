@@ -87,7 +87,7 @@ export default async function getRenovatePatch({ owner, repo, prnum,
 
     return {
         type: "renovate",
-        body: patchResponse.text(),
+        body: await patchResponse.text(),
         watermark: `[[puLL-Merge](https://github.com/brave/pull-merge)] - [${tOrg}/${tRepo}@${fromFiltered}..${toFiltered}](${link}/compare/${fromFiltered}..${toFiltered}.diff)`
     };
 }
