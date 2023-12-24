@@ -124,9 +124,38 @@ runs:
               return timeDiffInHours > hours;
             }
 
-            const watermark = `[[puLL-Merge](https://github.com/brave/pull-merge)] - [${options.owner}/${options.repo}@${options.prnum}](https://github.com/${options.owner}/${options.repo}/pull/${options.prnum})`
+            let patch = null;
+            let logError = null;
+            let patchExplained = null;
 
             try {
+              // if the PR is a renovate PR, we need to get the patch from the renovate API
+              // check if the PR actor is renovate[bot]
+
+              if ((context.payload.pull_request && context.payload.pull_request.user.login === 'renovate[bot]') || context.actor === 'renovate[bot]') {
+                patch = await getRenovatePatch({
+                  owner: options.owner,
+                  repo: options.repo,
+                  prnum: options.prnum,
+                  debug: debug,
+                  github: github});
+              } else if ((context.payload.pull_request && context.payload.pull_request.user.login === 'dependabot[bot]') || context.actor === 'dependabot[bot]') {
+                patch = await getDependabotPatch({
+                  owner: options.owner,
+                  repo: options.repo,
+                  prnum: options.prnum,
+                  debug: debug,
+                  github: github});
+              } else {
+                patch = await getPatch({
+                  owner: options.owner,
+                  repo: options.repo,
+                  prnum: options.prnum,
+                  debug: debug,
+                  runIfPrivate: options.run_if_private,
+                  github: github});
+              }
+
               const query = `query($owner:String!, $name:String!, $prnumber:Int!) {
                 repository(owner:$owner, name:$name) {
                   pullRequest(number:$prnumber) {
@@ -148,7 +177,7 @@ runs:
               }
               const messages = (await github.graphql(query, variables)).repository.pullRequest.comments.nodes;
 
-              if (messages.some(msg => msg.body.includes(watermark) && !isOlderThanXHours(msg.updatedAt, options.debounce_time))) {
+              if (messages.some(msg => msg.body.includes(patch.watermark) && !isOlderThanXHours(msg.updatedAt, options.debounce_time))) {
                 throw new Error("debounce");
               }
 
@@ -160,46 +189,19 @@ runs:
 
               if (debug) console.log(`Deleting ${messages.length} message(s)`);
               for (var i = 0; i < messages.length; i++) {
-                if (messages[i].body.includes(watermark)) {
+                if (messages[i].body.includes(patch.watermark)) {
                   await github.graphql(deleteQuery, {id: messages[i].id});
                 }
               }
 
-              // if the PR is a renovate PR, we need to get the patch from the renovate API
-              // check if the PR actor is renovate[bot]
-              let patchBody = "";
-              if ((context.payload.pull_request && context.payload.pull_request.user.login === 'renovate[bot]') || context.actor === 'renovate[bot]') {
-                patchBody = await getRenovatePatch({
-                  owner: options.owner,
-                  repo: options.repo,
-                  prnum: options.prnum,
-                  debug: debug,
-                  github: github});
-              } else if ((context.payload.pull_request && context.payload.pull_request.user.login === 'dependabot[bot]') || context.actor === 'dependabot[bot]') {
-                patchBody = await getDependabotPatch({
-                  owner: options.owner,
-                  repo: options.repo,
-                  prnum: options.prnum,
-                  debug: debug,
-                  github: github});
-              } else {
-                patchBody = await getPatch({
-                  owner: options.owner,
-                  repo: options.repo,
-                  prnum: options.prnum,
-                  debug: debug,
-                  runIfPrivate: options.run_if_private,
-                  github: github});
-              }
-
               const filteredPatch = await filterdiff({
-                content: patchBody,
+                content: patch.body,
                 args: options.filterdiff_args,
                 debug: debug});
 
-              if (debug) console.log(`\n\nOriginal patch:\n${patchBody}\n\nFiltered patch:\n${filteredPatch}\n\n`);
+              if (debug) console.log(`\n\nOriginal patch:\n${patch.body}\n\nFiltered patch:\n${filteredPatch}\n\n`);
 
-              const patchExplained = watermark+"\n\n"+(await explainPatch({
+              patchExplained = patch.watermark+"\n\n"+(await explainPatch({
                 openaiKey: options.openai_api_key,
                 patchBody: filteredPatch,
                 github: github,
@@ -210,18 +212,28 @@ runs:
                 amplification: options.amplification,
                 max_tokens: options.max_tokens}));
 
-              github.rest.issues.createComment({
-                owner: options.owner,
-                repo: options.repo,
-                issue_number: options.prnum,
-                body: patchExplained
-              });
-
               await github.rest.issues.addLabels({
                 owner: options.owner,
                 repo: options.repo,
                 issue_number: options.prnum,
                 labels: ["puLL-Merge"],
+              });
+            } catch (error) {
+              console.log(error);
+              logError = error;
+              if (debug) throw error;
+            }
+
+            try {
+              if (patchExplained === null && patch.type !== "simple" && error.message !== "debounce") {
+                patchExplained = patch.watermark+"\n\n"+`error ${error.message}`;
+              }
+
+              if (patchExplained) await github.rest.issues.createComment({
+                owner: options.owner,
+                repo: options.repo,
+                issue_number: options.prnum,
+                body: patchExplained
               });
             } catch (error) {
               console.log(error);

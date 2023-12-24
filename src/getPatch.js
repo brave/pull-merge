@@ -50,5 +50,9 @@ export default async function getPatch({ owner, repo, prnum,
         patchBody = pBody;
     }
 
-    return patchBody;
-}  
+    return {
+        type: "simple",
+        body: patchBody,
+        watermark: `[[puLL-Merge](https://github.com/brave/pull-merge)] - [${owner}/${repo}@${prnum}](https://github.com/${owner}/${repo}/pull/${prnum})`
+    };
+}
