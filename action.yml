@@ -225,8 +225,8 @@ runs:
             }
 
             try {
-              if (patchExplained === null && patch.type !== "simple" && error.message !== "debounce") {
-                patchExplained = patch.watermark+"\n\n"+`error ${error.message}`;
+              if (patchExplained === null && patch.type !== "simple" && logError.message !== "debounce") {
+                patchExplained = patch.watermark+"\n\n"+`logError ${logError.message}`;
               }
 
               if (patchExplained) await github.rest.issues.createComment({
