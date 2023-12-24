@@ -86,6 +86,8 @@ export default async function getRenovatePatch({ owner, repo, prnum,
         throw new Error(`Could not fetch PR diff: ${patchResponse.status} ${patchResponse.statusText}`);
 
     return {
+        repo: tRepo,
+        owner: tOrg,
         type: "renovate",
         body: await patchResponse.text(),
         watermark: `[[puLL-Merge](https://github.com/brave/pull-merge)] - [${tOrg}/${tRepo}@${fromFiltered}..${toFiltered}](${link}/compare/${fromFiltered}..${toFiltered}.diff)`
