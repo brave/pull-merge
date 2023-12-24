@@ -78,6 +78,8 @@ export default async function getDependabotPatch({ owner, repo, prnum,
             throw new Error(`Could not fetch PR diff: ${patchResponse.status} ${patchResponse.statusText}`);
 
         return {
+            repo: tRepo,
+            owner: tOrg,
             type: "dependabot",
             body: await patchResponse.text(),
             watermark: `[[puLL-Merge](https://github.com/brave/pull-merge)] - [${tOrg}/${tRepo}@${fromFiltered}..${toFiltered}](${patchLink})`
