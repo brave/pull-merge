@@ -225,7 +225,7 @@ runs:
             }
 
             try {
-              if (patchExplained === null && patch.type !== "simple" && logError.message !== "debounce") {
+              if (options.openai_api_key !== null && patchExplained === null && patch.type !== "simple" && logError.message !== "debounce") {
                 patchExplained = patch.watermark+"\n\n"+`logError ${logError.message}`;
               }
 
