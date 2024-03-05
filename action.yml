@@ -87,7 +87,7 @@ runs:
             let options = Object.assign({
               "debounce_time": "6",
               "amplification": "4",
-              "filterdiff_args": "--exclude=**/package-lock.json --exclude=**/yarn.lock --exclude=**/*.js.map --exclude=**/*.svg",
+              "filterdiff_args": "--exclude=**/package-lock.json --exclude=**/yarn.lock --exclude=**/*.js.map --exclude=**/*.svg --exclude=**/test/data/**/*",
               "openai_models": "gpt-3.5-turbo-0125",
               "owner": context.repo.owner,
               "repo": context.repo.repo,
