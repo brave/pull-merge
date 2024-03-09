@@ -51,7 +51,7 @@ runs:
       with:
         node-version: '20.x'
     - name: Install patchutils for filterdiff
-      uses: awalsh128/cache-apt-pkgs-action@44c33b32f808cdddd5ac0366d70595ed63661ed8 # v1.3.1
+      uses: awalsh128/cache-apt-pkgs-action@a6c3917cc929dd0345bfb2d3feaf9101823370ad # v1.4.2
       with:
         packages: patchutils
         version: 1.0
