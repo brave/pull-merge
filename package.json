@@ -6,6 +6,7 @@
     },
     "dependencies": {
         "@anthropic-ai/sdk": "0.17.2",
+        "@anthropic-ai/tokenizer": "^0.0.4",
         "@octokit/core": "^5.0.2",
         "lodash": "^4.17.21",
         "markdown-to-txt": "^2.0.1",
