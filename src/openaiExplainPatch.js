@@ -3,7 +3,7 @@ import { encoding_for_model } from "tiktoken";
 
 export default async function explainPatch({apiKey, patchBody, owner, repo,
   models = ["gpt-3.5-turbo-0125"],
-  system_prompt = `
+  system = `
 You are an expert software engineer reviewing a pull request on Github. Lines that start with "+" have been added, lines that start with "-" have been deleted. Use markdown for formatting your review.
 
 Desired format:
@@ -47,7 +47,7 @@ Desired format:
         messages: [
               {
                 "role": "system",
-                "content": system_prompt,
+                "content": system,
               },
               {
                 "role": "user",
