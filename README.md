@@ -27,6 +27,17 @@ jobs:
 
 ## Testing LLM integrations (local)
 
+### OpenAI
+
 ```bash
 $ ./run.js ./src/openaiExplainPatch.js --githubKey=<GITHUB_KEY> --openaiKey=<OPENAI_KEY> --owner=brave --repo=security-action --prnum=406
+```
+
+### Claude
+
+Make sure your Claude API key is set as `ANTHROPIC_API_KEY` in your
+environment, then run:
+
+```bash
+$ ./run.js ./src/claudeExplainPatch.js --githubKey=<GITHUB_KEY> --owner=brave --repo=security-action --prnum=406
 ```
