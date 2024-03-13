@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { encoding_for_model } from "tiktoken";
 
-export default async function explainPatch({openaiKey, patchBody, owner, repo,
+export default async function explainPatch({apiKey, patchBody, owner, repo,
   models = ["gpt-3.5-turbo-0125"],
   system_prompt = `
 You are an expert software engineer reviewing a pull request on Github. Lines that start with "+" have been added, lines that start with "-" have been deleted. Use markdown for formatting your review.
@@ -23,7 +23,7 @@ Desired format:
   presence_penalty=0,
   amplification=2,
   debug=false}) {
-  const openai = new OpenAI({apiKey: openaiKey});
+  const openai = new OpenAI({apiKey});
   const realModels = Array.isArray(models) ? models : models.split(" ");
   const user_prompt = `Repository: https://github.com/${owner}/${repo}\n\nThis is the PR diff\n\`\`\`\n${patchBody}\n\`\`\``;
 

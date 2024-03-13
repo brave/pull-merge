@@ -9,6 +9,9 @@ inputs:
   openai_api_key:
     description: |
       API key to interact with the OpenAI endpoint
+  anthropic_api_key:
+    description: |
+      API key to interact with the Anthropic endpoint
   debounce_time:
     description: |
       Debounce Time in hours
@@ -21,6 +24,9 @@ inputs:
   openai_models:
     description: |
       selection of models to use for the openai endpoint
+  anthropic_models:
+    description: |
+      selection of models to use for the anthropic endpoint
   run_if_private:
     description: |
       run the action even if the repository is private
@@ -66,7 +72,6 @@ runs:
         DEBUG: ${{ (inputs.debug == 'true' || runner.debug) && 'true' || 'false'}}
       with:
           script: |
-            const { default: explainPatch } = await import('${{ github.action_path }}/src/openaiExplainPatch.js');
             const { default: filterdiff } = await import('${{ github.action_path }}/src/filterdiff.js');
             const { default: getPatch } = await import('${{ github.action_path }}/src/getPatch.js');
             const { default: getRenovatePatch } = await import('${{ github.action_path }}/src/getRenovatePatch.js');
@@ -89,6 +94,7 @@ runs:
               "amplification": "4",
               "filterdiff_args": "--exclude=**/package-lock.json --exclude=**/yarn.lock --exclude=**/*.js.map --exclude=**/*.svg --exclude=**/test/data/**/*",
               "openai_models": "gpt-3.5-turbo-0125",
+              "anthropic_models": "claude-3-opus-20240229",
               "owner": context.repo.owner,
               "repo": context.repo.repo,
               "prnum": context.issue.number,
@@ -100,7 +106,14 @@ runs:
             options.amplification = parseFloat(options.amplification, 10);
             options.prnum = parseFloat(options.prnum, 10);
             options.max_tokens = parseFloat(options.max_tokens, 10);
-            
+
+            const { default: explainPatch } = options.anthropic_api_key ?
+              await import('${{ github.action_path }}/src/anthropicExplainPatch.js') :
+              await import('${{ github.action_path }}/src/openaiExplainPatch.js');
+
+            options.key = options.anthropic_api_key || options.openai_api_key;
+            options.models = options.anthropic_api_key ? options.anthropic_models : options.openai_models;
+
             debug = options.debug ? (options.debug == 'true') : debug;
 
             if (debug) {
@@ -202,13 +215,12 @@ runs:
               if (debug) console.log(`\n\nOriginal patch:\n${patch.body}\n\nFiltered patch:\n${filteredPatch}\n\n`);
 
               patchExplained = patch.watermark+"\n\n"+(await explainPatch({
-                openaiKey: options.openai_api_key,
+                apiKey: options.key,
                 patchBody: filteredPatch,
-                github: github,
                 owner: patch.owner,
                 repo: patch.repo,
                 debug: debug,
-                models: options.openai_models.split(" "),
+                models: options.models.split(" "),
                 amplification: options.amplification,
                 max_tokens: options.max_tokens}));
 
@@ -225,7 +237,7 @@ runs:
             }
 
             try {
-              if (options.openai_api_key !== null && patchExplained === null && patch.type !== "simple" && logError.message !== "debounce") {
+              if (options.key && patchExplained === null && patch.type !== "simple" && logError.message !== "debounce") {
                 patchExplained = patch.watermark+"\n\n"+`logError ${logError.message}`;
               }
 

@@ -20,4 +20,5 @@ jobs:
           debug: true
           github_token: ${{ secrets.GITHUB_TOKEN }}
           openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           amplification: 0 # always trigger the action

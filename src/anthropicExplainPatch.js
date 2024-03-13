@@ -1,8 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { countTokens } from '@anthropic-ai/tokenizer';
 
-export default async function explainPatch({patchBody, prnum, owner, repo,
-  githubToken,
-  model = 'claude-3-opus-20240229',
+export default async function explainPatch({apiKey, patchBody, owner, repo,
+  models = ['claude-3-opus-20240229'],
   system = `
 You are an expert software engineer reviewing a pull request on Github. Lines that start with "+" have been added, lines that start with "-" have been deleted. Use markdown for formatting your review.
 
@@ -19,36 +19,55 @@ Desired format:
   max_tokens = 2048,
   temperature = 1,
   top_p = 1,
+  amplification = 2,
   debug = false}) {
-  if (!patchBody) {
-    const getPatch = await import('./getPatch.js');
-    const patch = await getPatch.default({
-      owner, repo, prnum, githubToken, debug
-    });
-    patchBody = patch.body;
-  }
 
   const user_prompt = `Repository: https://github.com/${owner}/${repo}\n\nThis is the PR diff\n\`\`\`\n${patchBody}\n\`\`\``;
+  const realModels = Array.isArray(models) ? models : models.split(" ");
 
   if (debug) {
     console.log(`user_prompt:\n\n${user_prompt}`);
   }
 
-  // defaults to using env variable ANTHROPIC_API_KEY
-  const anthropic = new Anthropic();
-  const aiResponse = await anthropic.messages.create({
-    max_tokens,
-    temperature,
-    model,
-    top_p,
-    system,
-    messages: [
-      {
-        role: 'user',
-        content: user_prompt
-      }
-    ]
-  });
+  const pLen = countTokens(patchBody);
+  if (pLen === 0)
+    throw new Error("The patch is empty, cannot summarize!");
+  if (pLen < amplification*max_tokens)
+    throw new Error("The patch is trivial, no need for a summarization");  
+
+
+  const anthropic = new Anthropic({apiKey});
+  
+  let model = null;
+
+  // iterate over the models, and find one that works, or throw the last error
+  // catch all the original errors in between, and throw the last one
+  for (let i = 0; i < realModels.length; i++)
+    try {
+      model = realModels[i];
+
+      var aiResponse = await anthropic.messages.create({
+        max_tokens,
+        temperature,
+        model,
+        top_p,
+        system,
+        messages: [
+          {
+            role: 'user',
+            content: user_prompt
+          }
+        ]
+      });
+
+      break;
+    } catch (e) {
+      if (i+1 === realModels.length) // last model
+        throw e;
+
+      console.log(e);
+      continue;
+    }
 
   let response = aiResponse.content;
 
