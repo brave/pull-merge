@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { parseArgs } from 'node:util';
-const [ node, file, _module, ...args ] = process.argv;
+import { parseArgs } from 'node:util'
+const [,, _module, ...args] = process.argv
 
-const run = (await import(_module)).default;
-const innerArgs = parseArgs({args, strict: false});
+const run = (await import(_module)).default
+const innerArgs = parseArgs({ args, strict: false })
 
-console.log(await run(innerArgs.values));
+console.log(await run(innerArgs.values))

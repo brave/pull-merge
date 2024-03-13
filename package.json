@@ -4,6 +4,10 @@
         "url": "https://github.com/brave/pull-merge/issues",
         "email": "security@brave.com"
     },
+    "scripts": {
+      "lint": "standard",
+      "lint-fix": "standard --fix"
+    },
     "dependencies": {
         "@anthropic-ai/sdk": "0.17.2",
         "@anthropic-ai/tokenizer": "^0.0.4",
@@ -12,5 +16,8 @@
         "markdown-to-txt": "^2.0.1",
         "openai": "^4.20.1",
         "tiktoken": "^1.0.11"
+    },
+    "devDependencies": {
+        "standard": "17.1.0"
     }
 }

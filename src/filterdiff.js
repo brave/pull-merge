@@ -1,31 +1,29 @@
-import { spawn } from "child_process";
+import { spawn } from 'child_process'
 
-export default async function filterdiff({ content, args=['--exclude=**/package-lock.json', '--exclude=**/yarn.lock', '--exclude=**/*.js.map'], debug }) {
-    const realArgs = ['--strip=1'];
-    // if args is not an array, split it on spaces
-    if (typeof args === 'string') {
-      args = args.split(" ").filter(Boolean);
-    }
-    
-    if (args.length > 0)
-      realArgs.push(...args);
+export default async function filterdiff ({ content, args = ['--exclude=**/package-lock.json', '--exclude=**/yarn.lock', '--exclude=**/*.js.map'], debug }) {
+  const realArgs = ['--strip=1']
+  // if args is not an array, split it on spaces
+  if (typeof args === 'string') {
+    args = args.split(' ').filter(Boolean)
+  }
 
-    if (debug) console.log(`filterdiff ${realArgs.join(" ")}`);
+  if (args.length > 0) { realArgs.push(...args) }
 
-    const cp = spawn('filterdiff', realArgs);
-    const output = [];
-    const error = [];
+  if (debug) console.log(`filterdiff ${realArgs.join(' ')}`)
 
-    cp.stdin.write(content);
+  const cp = spawn('filterdiff', realArgs)
+  const output = []
+  const error = []
 
-    cp.stdout.on('data', (data) => output.push(data));
-    cp.stderr.on('data', (data) => error.push(data));
-    cp.stdin.end();
+  cp.stdin.write(content)
 
-    await new Promise((resolve) => cp.on('close', resolve));
+  cp.stdout.on('data', (data) => output.push(data))
+  cp.stderr.on('data', (data) => error.push(data))
+  cp.stdin.end()
 
-    if (error.length > 0)
-        throw new Error(error.join());
+  await new Promise((resolve) => cp.on('close', resolve))
 
-    return output.join();
+  if (error.length > 0) { throw new Error(error.join()) }
+
+  return output.join()
 }
