@@ -93,7 +93,7 @@ runs:
               "debounce_time": "6",
               "amplification": "4",
               "filterdiff_args": "--exclude=**/package-lock.json --exclude=**/yarn.lock --exclude=**/*.js.map --exclude=**/*.svg --exclude=**/test/data/**/*",
-              "openai_models": "gpt-3.5-turbo-0125",
+              "openai_models": "gpt-4-0125-preview gpt-3.5-turbo-0125",
               "anthropic_models": "claude-3-opus-20240229",
               "owner": context.repo.owner,
               "repo": context.repo.repo,
