@@ -237,7 +237,7 @@ runs:
             }
 
             try {
-              if (options.key && patchExplained === null && patch.type !== "simple" && logError.message !== "debounce") {
+              if (options.key && patchExplained === null && patch.type !== "simple" && logError.message !== "debounce" && !logError.message.includes("maximum context length")) {
                 patchExplained = patch.watermark+"\n\n"+`logError ${logError.message}`;
               }
 
