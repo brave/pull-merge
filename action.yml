@@ -72,74 +72,60 @@ runs:
         DEBUG: ${{ (inputs.debug == 'true' || runner.debug) && 'true' || 'false'}}
       with:
           script: |
-            const { default: filterdiff } = await import('${{ github.action_path }}/src/filterdiff.js');
-            const { default: getPatch } = await import('${{ github.action_path }}/src/getPatch.js');
-            const { default: getRenovatePatch } = await import('${{ github.action_path }}/src/getRenovatePatch.js');
-            const { default: getDependabotPatch } = await import('${{ github.action_path }}/src/getDependabotPatch.js');
-            const { default: getConfig } = await import('${{ github.action_path }}/src/getConfig.js');
-            const { default: getProperties } = await import('${{ github.action_path }}/src/getProperties.js');
-            
+            const { default: filterdiff } = await import('${{ github.action_path }}/src/filterdiff.js')
+            const { default: getPatch } = await import('${{ github.action_path }}/src/getPatch.js')
+            const { default: getRenovatePatch } = await import('${{ github.action_path }}/src/getRenovatePatch.js')
+            const { default: getDependabotPatch } = await import('${{ github.action_path }}/src/getDependabotPatch.js')
+            const { default: getConfig } = await import('${{ github.action_path }}/src/getConfig.js')
+            const { default: getProperties } = await import('${{ github.action_path }}/src/getProperties.js')
+
             const inputs = ${{ toJson(inputs) }};
             // delete if empty string in inputs value
-            Object.keys(inputs).forEach(key => inputs[key] === '' && delete inputs[key]);
-            
-            var debug = process.env.DEBUG == 'true';
-            if (debug) console.log("Initializing puLL-Merge");
+            Object.keys(inputs).forEach(key => inputs[key] === '' && delete inputs[key])
 
-            let config = await getConfig({owner: context.repo.owner, repo: context.repo.repo, path: '.github/pull-merge.json', debug, github});
-            let properties = await getProperties({owner: context.repo.owner, repo: context.repo.repo, debug, github});
+            let debug = process.env.DEBUG == 'true'
+            if (debug) console.log('Initializing puLL-Merge')
 
-            let options = Object.assign({
-              "debounce_time": "6",
-              "amplification": "4",
-              "filterdiff_args": "--exclude=**/package-lock.json --exclude=**/yarn.lock --exclude=**/*.js.map --exclude=**/*.svg --exclude=**/test/data/**/*",
-              "openai_models": "gpt-4-0125-preview gpt-3.5-turbo-0125",
-              "anthropic_models": "claude-3-opus-20240229",
-              "owner": context.repo.owner,
-              "repo": context.repo.repo,
-              "prnum": context.issue.number,
-              "max_tokens": "2048",
-            }, config, properties, inputs);
+            const config = await getConfig({ owner: context.repo.owner, repo: context.repo.repo, path: '.github/pull-merge.json', debug, github })
+            const properties = await getProperties({ owner: context.repo.owner, repo: context.repo.repo, debug, github })
+
+            const options = Object.assign({
+              debounce_time: '6',
+              amplification: '4',
+              filterdiff_args: '--exclude=**/package-lock.json --exclude=**/yarn.lock --exclude=**/*.js.map --exclude=**/*.svg --exclude=**/test/data/**/*',
+              openai_models: 'gpt-4-0125-preview gpt-3.5-turbo-0125',
+              anthropic_models: 'claude-3-opus-20240229',
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              prnum: context.issue.number,
+              max_tokens: '2048',
+            }, config, properties, inputs)
 
             // convert to numbers some options
-            options.debounce_time = parseFloat(options.debounce_time, 10);
-            options.amplification = parseFloat(options.amplification, 10);
-            options.prnum = parseFloat(options.prnum, 10);
-            options.max_tokens = parseFloat(options.max_tokens, 10);
+            options.debounce_time = parseFloat(options.debounce_time, 10)
+            options.amplification = parseFloat(options.amplification, 10)
+            options.prnum = parseFloat(options.prnum, 10)
+            options.max_tokens = parseFloat(options.max_tokens, 10)
 
-            const { default: explainPatch } = options.anthropic_api_key ?
-              await import('${{ github.action_path }}/src/anthropicExplainPatch.js') :
-              await import('${{ github.action_path }}/src/openaiExplainPatch.js');
+            const { default: explainPatch } = options.anthropic_api_key
+              ? await import('${{ github.action_path }}/src/anthropicExplainPatch.js')
+              : await import('${{ github.action_path }}/src/openaiExplainPatch.js')
 
-            options.key = options.anthropic_api_key || options.openai_api_key;
-            options.models = options.anthropic_api_key ? options.anthropic_models : options.openai_models;
+            const { default: submitReview } = await import('${{ github.action_path }}/src/submitReview.js')
 
-            debug = options.debug ? (options.debug == 'true') : debug;
+            options.key = options.anthropic_api_key || options.openai_api_key
+            options.models = options.anthropic_api_key ? options.anthropic_models : options.openai_models
+
+            debug = options.debug ? (options.debug == 'true') : debug
 
             if (debug) {
-              console.log(`Using options: ${JSON.stringify(options)}`);
-              console.log(`Using config: ${JSON.stringify(config)}`);
-              console.log(`Using properties: ${JSON.stringify(properties)}`);
-              console.log(`Using inputs: ${JSON.stringify(inputs)}`);
-            }            
-
-            function isOlderThanXHours(date, hours) {
-              // Get the current date and time
-              var now = new Date();
-
-              // Calculate the time difference in milliseconds
-              var timeDiff = now - new Date(date);
-
-              // Convert the time difference to hours
-              var timeDiffInHours = timeDiff / (1000 * 60 * 60);
-
-              // Check if the time difference is greater than the specified number of hours
-              return timeDiffInHours > hours;
+              console.log(`Using options: ${JSON.stringify(options)}`)
+              console.log(`Using config: ${JSON.stringify(config)}`)
+              console.log(`Using properties: ${JSON.stringify(properties)}`)
+              console.log(`Using inputs: ${JSON.stringify(inputs)}`)
             }
 
-            let patch = null;
-            let logError = null;
-            let patchExplained = null;
+            let patch = null
 
             try {
               // if the PR is a renovate PR, we need to get the patch from the renovate API
@@ -150,104 +136,63 @@ runs:
                   owner: options.owner,
                   repo: options.repo,
                   prnum: options.prnum,
-                  debug: debug,
-                  github: github});
+                  debug,
+                  github
+                })
               } else if ((context.payload.pull_request && context.payload.pull_request.user.login === 'dependabot[bot]') || context.actor === 'dependabot[bot]') {
                 patch = await getDependabotPatch({
                   owner: options.owner,
                   repo: options.repo,
                   prnum: options.prnum,
-                  debug: debug,
-                  github: github});
+                  debug,
+                  github
+                })
               } else {
                 patch = await getPatch({
                   owner: options.owner,
                   repo: options.repo,
                   prnum: options.prnum,
-                  debug: debug,
+                  debug,
                   runIfPrivate: options.run_if_private,
-                  github: github});
-              }
-
-              const query = `query($owner:String!, $name:String!, $prnumber:Int!) {
-                repository(owner:$owner, name:$name) {
-                  pullRequest(number:$prnumber) {
-                    comments(last: 100) {
-                      nodes {
-                        id
-                        author { login }
-                        body
-                        updatedAt
-                      }
-                    }
-                  }
-                }
-              }`;
-              const variables = {
-                owner: options.owner,
-                name: options.repo,
-                prnumber: options.prnum,
-              }
-              const messages = (await github.graphql(query, variables)).repository.pullRequest.comments.nodes;
-
-              if (messages.some(msg => msg.body.includes(patch.watermark) && !isOlderThanXHours(msg.updatedAt, options.debounce_time))) {
-                throw new Error("debounce");
-              }
-
-              const deleteQuery = `mutation DeleteIssueComment($id:ID!) {
-                deleteIssueComment(input:{id:$id}) {
-                  clientMutationId
-                }
-              }`
-
-              if (debug) console.log(`Deleting ${messages.length} message(s)`);
-              for (var i = 0; i < messages.length; i++) {
-                if (messages[i].body.includes(patch.watermark)) {
-                  await github.graphql(deleteQuery, {id: messages[i].id});
-                }
+                  github
+                })
               }
 
               const filteredPatch = await filterdiff({
                 content: patch.body,
                 args: options.filterdiff_args,
-                debug: debug});
+                debug
+              })
 
-              if (debug) console.log(`\n\nOriginal patch:\n${patch.body}\n\nFiltered patch:\n${filteredPatch}\n\n`);
-
-              patchExplained = patch.watermark+"\n\n"+(await explainPatch({
+              const explainPatchCb = async () => await explainPatch({
                 apiKey: options.key,
                 patchBody: filteredPatch,
                 owner: patch.owner,
                 repo: patch.repo,
-                debug: debug,
-                models: options.models.split(" "),
+                debug,
+                models: options.models.split(' '),
                 amplification: options.amplification,
-                max_tokens: options.max_tokens}));
+                max_tokens: options.max_tokens
+              })
+
+              await submitReview({
+                owner: options.owner,
+                repo: options.repo,
+                prnum: options.prnum,
+                watermark: patch.watermark,
+                explainPatch: explainPatchCb,
+                debounceTime: options.debounce_time,
+                debug,
+                github
+              })
 
               await github.rest.issues.addLabels({
                 owner: options.owner,
                 repo: options.repo,
                 issue_number: options.prnum,
-                labels: ["puLL-Merge"],
-              });
+                labels: ['puLL-Merge']
+              })
             } catch (error) {
-              console.log(error);
-              logError = error;
-              if (debug) throw error;
-            }
-
-            try {
-              if (options.key && patchExplained === null && patch.type !== "simple" && logError.message !== "debounce" && !logError.message?.includes("maximum context length")) {
-                patchExplained = patch.watermark+"\n\n"+`logError ${logError.message}`;
-              }
-
-              if (patchExplained) await github.rest.issues.createComment({
-                owner: options.owner,
-                repo: options.repo,
-                issue_number: options.prnum,
-                body: patchExplained
-              });
-            } catch (error) {
-              console.log(error);
-              if (debug) throw error;
+              console.log(error)
+              if (debug) throw error
             }
