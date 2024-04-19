@@ -99,6 +99,7 @@ runs:
               repo: context.repo.repo,
               prnum: context.issue.number,
               max_tokens: '2048',
+              subtle_mode: 'false'
             }, config, properties, inputs)
 
             // convert to numbers some options
@@ -106,12 +107,15 @@ runs:
             options.amplification = parseFloat(options.amplification, 10)
             options.prnum = parseFloat(options.prnum, 10)
             options.max_tokens = parseFloat(options.max_tokens, 10)
+            options.subtle_mode = options.subtle_mode === 'true'
 
             const { default: explainPatch } = options.anthropic_api_key
               ? await import('${{ github.action_path }}/src/anthropicExplainPatch.js')
               : await import('${{ github.action_path }}/src/openaiExplainPatch.js')
 
-            const { default: submitReview } = await import('${{ github.action_path }}/src/submitReview.js')
+            const { default: submitReview } = options.subtle_mode
+              ? await import('${{ github.action_path }}/src/subtleSubmitReview.js')
+              : await import('${{ github.action_path }}/src/submitReview.js')
 
             options.key = options.anthropic_api_key || options.openai_api_key
             options.models = options.anthropic_api_key ? options.anthropic_models : options.openai_models
