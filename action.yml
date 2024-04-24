@@ -56,11 +56,8 @@ runs:
     - uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
       with:
         node-version: '20.x'
-    - name: Install patchutils for filterdiff
-      uses: awalsh128/cache-apt-pkgs-action@44c33b32f808cdddd5ac0366d70595ed63661ed8 # v1.3.1
-      with:
-        packages: patchutils
-        version: 1.0
+    - name: Install patchutils
+      run: sudo apt-get install -y patchutils
     - id: npm
       run: cd ${{ github.action_path }}; npm ci
       shell: bash
