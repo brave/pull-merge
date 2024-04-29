@@ -203,11 +203,21 @@ runs:
                 region: options.region
               })
 
+              let watermark = patch.watermark
+
+              if (debug) {
+                watermark = options.bedrock_aws_iam_role_arn
+                              ? `bedrock debug - ${watermark}`
+                              : options.anthropic_api_key
+                                ? `anthropic debug - ${watermark}`
+                                : `openai debug - ${watermark}`
+              }
+
               await submitReview({
                 owner: options.owner,
                 repo: options.repo,
                 prnum: options.prnum,
-                watermark: patch.watermark,
+                watermark,
                 explainPatch: explainPatchCb,
                 debounceTime: options.debounce_time,
                 debug,
