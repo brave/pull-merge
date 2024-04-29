@@ -5,6 +5,7 @@ on:
   merge_group:
 permissions:
   contents: read
+  id-token: write
   pull-requests: write
 jobs:
   pull-merge:
@@ -21,3 +22,5 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           openai_api_key: ${{ secrets.OPENAI_API_KEY }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          bedrock_aws_iam_role_arn: ${{ secrets.SECURITY_BEDROCK_AWS_IAM_ROLE_ARN }}
+          region: us-west-2

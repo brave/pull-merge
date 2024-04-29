@@ -27,6 +27,9 @@ inputs:
   anthropic_models:
     description: |
       selection of models to use for the anthropic endpoint
+  bedrock_models:
+    description: |
+      selection of models to use for the bedrock endpoint
   run_if_private:
     description: |
       run the action even if the repository is private
@@ -49,10 +52,24 @@ inputs:
     description: |
       maximum number of tokens to generate
     required: false
+  bedrock_aws_iam_role_arn:
+    description: |
+      AWS IAM Role ARN to interact with the Bedrock endpoint
+    default: ""
+  region:
+    description: |
+      AWS region to interact with the Bedrock endpoint
+    default: ""
 # outputs:
 runs:
   using: 'composite'
   steps:
+    - if: ${{ inputs.bedrock_aws_iam_role_arn != '' && inputs.region != ''}}
+      name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+      with:
+        role-to-assume: ${{ inputs.bedrock_aws_iam_role_arn }}
+        aws-region: ${{ inputs.region }}
     - uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
       with:
         node-version: '20.x'
@@ -93,6 +110,7 @@ runs:
               filterdiff_args: '--exclude=**/package-lock.json --exclude=**/yarn.lock --exclude=**/*.js.map --exclude=**/*.svg --exclude=**/test/data/**/* --exclude=**/docs/**/* --exclude=**/deploy/**/* --exclude=**/.htpasswd',
               openai_models: 'gpt-4-turbo-2024-04-09 gpt-3.5-turbo-0125',
               anthropic_models: 'claude-3-opus-20240229',
+              bedrock_models: 'anthropic.claude-3-opus-20240229-v1:0',
               owner: context.repo.owner,
               repo: context.repo.repo,
               prnum: context.issue.number,
@@ -107,16 +125,23 @@ runs:
             options.max_tokens = parseFloat(options.max_tokens, 10)
             options.subtle_mode = options.subtle_mode === 'true'
 
-            const { default: explainPatch } = options.anthropic_api_key
-              ? await import('${{ github.action_path }}/src/anthropicExplainPatch.js')
-              : await import('${{ github.action_path }}/src/openaiExplainPatch.js')
+            const { default: explainPatch } = 
+              options.bedrock_aws_iam_role_arn
+                ? await import('${{ github.action_path }}/src/bedrockExplainPatch.js')
+                : options.anthropic_api_key
+                  ? await import('${{ github.action_path }}/src/anthropicExplainPatch.js')
+                  : await import('${{ github.action_path }}/src/openaiExplainPatch.js')
 
             const { default: submitReview } = options.subtle_mode
               ? await import('${{ github.action_path }}/src/subtleSubmitReview.js')
               : await import('${{ github.action_path }}/src/submitReview.js')
 
             options.key = options.anthropic_api_key || options.openai_api_key
-            options.models = options.anthropic_api_key ? options.anthropic_models : options.openai_models
+            options.models = options.bedrock_aws_iam_role_arn
+                              ? options.bedrock_models
+                              : options.anthropic_api_key
+                                ? options.anthropic_models
+                                : options.openai_models
 
             debug = options.debug ? (options.debug == 'true') : debug
 
@@ -174,7 +199,8 @@ runs:
                 debug,
                 models: options.models.split(' '),
                 amplification: options.amplification,
-                max_tokens: options.max_tokens
+                max_tokens: options.max_tokens,
+                region: options.region
               })
 
               await submitReview({
