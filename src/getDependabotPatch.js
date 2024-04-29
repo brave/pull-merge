@@ -1,3 +1,4 @@
+// runIfPrivate always ignored since renovate patches are always public
 export default async function getDependabotPatch ({
   owner, repo, prnum,
   githubToken = null,

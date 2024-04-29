@@ -1,5 +1,6 @@
 import { markdownToTxt } from 'markdown-to-txt'
 
+// runIfPrivate always ignored since renovate patches are always public
 export default async function getRenovatePatch ({
   owner, repo, prnum,
   githubToken = null,
