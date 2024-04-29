@@ -88,9 +88,6 @@ runs:
       with:
           script: |
             const { default: filterdiff } = await import('${{ github.action_path }}/src/filterdiff.js')
-            const { default: getPatch } = await import('${{ github.action_path }}/src/getPatch.js')
-            const { default: getRenovatePatch } = await import('${{ github.action_path }}/src/getRenovatePatch.js')
-            const { default: getDependabotPatch } = await import('${{ github.action_path }}/src/getDependabotPatch.js')
             const { default: getConfig } = await import('${{ github.action_path }}/src/getConfig.js')
             const { default: getProperties } = await import('${{ github.action_path }}/src/getProperties.js')
 
@@ -136,6 +133,12 @@ runs:
               ? await import('${{ github.action_path }}/src/subtleSubmitReview.js')
               : await import('${{ github.action_path }}/src/submitReview.js')
 
+            const { default: getPatch } = (context.payload.pull_request && context.payload.pull_request.user.login === 'renovate[bot]') || context.actor === 'renovate[bot]'
+              ? await import('${{ github.action_path }}/src/getRenovatePatch.js')
+              : (context.payload.pull_request && context.payload.pull_request.user.login === 'dependabot[bot]') || context.actor === 'dependabot[bot]'
+                ? await import('${{ github.action_path }}/src/getDependabotPatch.js')
+                : await import('${{ github.action_path }}/src/getPatch.js')
+
             options.key = options.anthropic_api_key || options.openai_api_key
             options.models = options.bedrock_aws_iam_role_arn
                               ? options.bedrock_models
@@ -152,38 +155,15 @@ runs:
               console.log(`Using inputs: ${JSON.stringify(inputs)}`)
             }
 
-            let patch = null
-
             try {
-              // if the PR is a renovate PR, we need to get the patch from the renovate API
-              // check if the PR actor is renovate[bot]
-
-              if ((context.payload.pull_request && context.payload.pull_request.user.login === 'renovate[bot]') || context.actor === 'renovate[bot]') {
-                patch = await getRenovatePatch({
-                  owner: options.owner,
-                  repo: options.repo,
-                  prnum: options.prnum,
-                  debug,
-                  github
-                })
-              } else if ((context.payload.pull_request && context.payload.pull_request.user.login === 'dependabot[bot]') || context.actor === 'dependabot[bot]') {
-                patch = await getDependabotPatch({
-                  owner: options.owner,
-                  repo: options.repo,
-                  prnum: options.prnum,
-                  debug,
-                  github
-                })
-              } else {
-                patch = await getPatch({
-                  owner: options.owner,
-                  repo: options.repo,
-                  prnum: options.prnum,
-                  debug,
-                  runIfPrivate: options.run_if_private,
-                  github
-                })
-              }
+              const patch = await getPatch({
+                owner: options.owner,
+                repo: options.repo,
+                prnum: options.prnum,
+                debug,
+                runIfPrivate: options.run_if_private,
+                github
+              })
 
               const filteredPatch = await filterdiff({
                 content: patch.body,
