@@ -1,4 +1,4 @@
-name: loop
+name: loop openai
 on:
   pull_request:
 permissions:
@@ -24,7 +24,5 @@ jobs:
           debug: true
           github_token: ${{ secrets.GITHUB_TOKEN }}
           openai_api_key: ${{ secrets.OPENAI_API_KEY }}
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          bedrock_aws_iam_role_arn: ${{ secrets.SECURITY_BEDROCK_AWS_IAM_ROLE_ARN }}
           region: us-west-2
           amplification: 0 # always trigger the action

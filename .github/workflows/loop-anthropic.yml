@@ -1,0 +1,28 @@
+name: loop anthropic
+on:
+  pull_request:
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write    
+jobs:
+  loop:
+    name: loop
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+        with:
+          fetch-depth: 0
+      - run: |
+          pwd
+          tree -a
+        shell: bash
+      - uses: ./
+        with:
+          debug: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          region: us-west-2
+          amplification: 0 # always trigger the action
