@@ -1,4 +1,4 @@
-module.exports = async ({github, context, inputs, actionPath}) => {
+module.exports = async ({ github, context, inputs, actionPath }) => {
   const { default: filterdiff } = await import(`${actionPath}/src/filterdiff.js`)
   const { default: getConfig } = await import(`${actionPath}/src/getConfig.js`)
   const { default: getProperties } = await import(`${actionPath}/src/getProperties.js`)
@@ -6,7 +6,7 @@ module.exports = async ({github, context, inputs, actionPath}) => {
   // delete if empty string in inputs value
   Object.keys(inputs).forEach(key => inputs[key] === '' && delete inputs[key])
 
-  let debug = process.env.DEBUG == 'true'
+  let debug = process.env.DEBUG === 'true'
   if (debug) console.log('Initializing puLL-Merge')
 
   const config = await getConfig({ owner: context.repo.owner, repo: context.repo.repo, path: '.github/pull-merge.json', debug, github })
@@ -33,7 +33,7 @@ module.exports = async ({github, context, inputs, actionPath}) => {
   options.max_tokens = parseFloat(options.max_tokens, 10)
   options.subtle_mode = options.subtle_mode === 'true'
 
-  const { default: explainPatch } = 
+  const { default: explainPatch } =
     options.bedrock_aws_iam_role_arn
       ? await import(`${actionPath}/src/bedrockExplainPatch.js`)
       : options.anthropic_api_key
@@ -47,17 +47,17 @@ module.exports = async ({github, context, inputs, actionPath}) => {
   const { default: getPatch } = (context.payload.pull_request && context.payload.pull_request.user.login === 'renovate[bot]') || context.actor === 'renovate[bot]'
     ? await import(`${actionPath}/src/getRenovatePatch.js`)
     : (context.payload.pull_request && context.payload.pull_request.user.login === 'dependabot[bot]') || context.actor === 'dependabot[bot]'
-      ? await import(`${actionPath}/src/getDependabotPatch.js`)
-      : await import(`${actionPath}/src/getPatch.js`)
+        ? await import(`${actionPath}/src/getDependabotPatch.js`)
+        : await import(`${actionPath}/src/getPatch.js`)
 
   options.key = options.anthropic_api_key || options.openai_api_key
   options.models = options.bedrock_aws_iam_role_arn
-                    ? options.bedrock_models
-                    : options.anthropic_api_key
-                      ? options.anthropic_models
-                      : options.openai_models
+    ? options.bedrock_models
+    : options.anthropic_api_key
+      ? options.anthropic_models
+      : options.openai_models
 
-  debug = options.debug ? (options.debug == 'true') : debug
+  debug = options.debug ? (options.debug === 'true') : debug
 
   if (debug) {
     console.log(`Using options: ${JSON.stringify(options)}`)
@@ -98,10 +98,10 @@ module.exports = async ({github, context, inputs, actionPath}) => {
 
     if (debug) {
       watermark = options.bedrock_aws_iam_role_arn
-                    ? `bedrock debug - ${watermark}`
-                    : options.anthropic_api_key
-                      ? `anthropic debug - ${watermark}`
-                      : `openai debug - ${watermark}`
+        ? `bedrock debug - ${watermark}`
+        : options.anthropic_api_key
+          ? `anthropic debug - ${watermark}`
+          : `openai debug - ${watermark}`
     }
 
     await submitReview({
