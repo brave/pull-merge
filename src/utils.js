@@ -9,7 +9,10 @@ Desired format:
 <list_of_changes> // Describe the main changes in the PR, organizing them by filename
 
 ### Security Hotspots
-<list_of_security_hotspots> // Describe locations for possible vulnerabilities in the change, order by risk
+<list_of_security_hotspots> // Describe locations for possible vulnerabilities in the change, ordered by risk. Do not include a vulnerability unless it is likely to present a real security risk. If there are none, omit this section.
+
+### Other Issues
+<list_of_issues> // Describe any other major issues with this code such as license incompatibilities introduced by a dependency. If there are none, omit this section.
 \n`
 
 export async function explainPatchHelper (patchBody, owner, repo, models, debug, getResponse) {
