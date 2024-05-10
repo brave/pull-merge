@@ -3,6 +3,8 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
   const { default: getConfig } = await import(`${actionPath}/src/getConfig.js`)
   const { default: getProperties } = await import(`${actionPath}/src/getProperties.js`)
 
+  const raise = (message) => { throw new Error(message) }
+
   // delete if empty string in inputs value
   Object.keys(inputs).forEach(key => inputs[key] === '' && delete inputs[key])
 
@@ -45,9 +47,9 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
     : await import(`${actionPath}/src/submitReview.js`)
 
   const { default: getPatch } = (context.payload.pull_request && context.payload.pull_request.user.login === 'renovate[bot]') || context.actor === 'renovate[bot]'
-    ? await import(`${actionPath}/src/getRenovatePatch.js`)
+    ? options.subtle_mode ? raise('subtle_mode enabled, this is not supported for renovate') : await import(`${actionPath}/src/getRenovatePatch.js`)
     : (context.payload.pull_request && context.payload.pull_request.user.login === 'dependabot[bot]') || context.actor === 'dependabot[bot]'
-        ? await import(`${actionPath}/src/getDependabotPatch.js`)
+        ? options.subtle_mode ? raise('subtle_mode enabled, this is not supported for dependabot') : await import(`${actionPath}/src/getDependabotPatch.js`)
         : await import(`${actionPath}/src/getPatch.js`)
 
   options.key = options.anthropic_api_key || options.openai_api_key
