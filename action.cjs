@@ -46,29 +46,29 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
     ? await import(`${actionPath}/src/subtleSubmitReview.js`)
     : await import(`${actionPath}/src/submitReview.js`)
 
-  const { default: getPatch } = (context.payload.pull_request && context.payload.pull_request.user.login === 'renovate[bot]') || context.actor === 'renovate[bot]'
-    ? options.subtle_mode ? raise('subtle_mode enabled, this is not supported for renovate') : await import(`${actionPath}/src/getRenovatePatch.js`)
-    : (context.payload.pull_request && context.payload.pull_request.user.login === 'dependabot[bot]') || context.actor === 'dependabot[bot]'
-        ? options.subtle_mode ? raise('subtle_mode enabled, this is not supported for dependabot') : await import(`${actionPath}/src/getDependabotPatch.js`)
-        : await import(`${actionPath}/src/getPatch.js`)
-
-  options.key = options.anthropic_api_key || options.openai_api_key
-  options.models = options.bedrock_aws_iam_role_arn
-    ? options.bedrock_models
-    : options.anthropic_api_key
-      ? options.anthropic_models
-      : options.openai_models
-
-  debug = options.debug ? (options.debug === 'true') : debug
-
-  if (debug) {
-    console.log(`Using options: ${JSON.stringify(options)}`)
-    console.log(`Using config: ${JSON.stringify(config)}`)
-    console.log(`Using properties: ${JSON.stringify(properties)}`)
-    console.log(`Using inputs: ${JSON.stringify(inputs)}`)
-  }
-
   try {
+    const { default: getPatch } = (context.payload.pull_request && context.payload.pull_request.user.login === 'renovate[bot]') || context.actor === 'renovate[bot]'
+      ? options.subtle_mode ? raise('subtle_mode enabled, this is not supported for renovate') : await import(`${actionPath}/src/getRenovatePatch.js`)
+      : (context.payload.pull_request && context.payload.pull_request.user.login === 'dependabot[bot]') || context.actor === 'dependabot[bot]'
+          ? options.subtle_mode ? raise('subtle_mode enabled, this is not supported for dependabot') : await import(`${actionPath}/src/getDependabotPatch.js`)
+          : await import(`${actionPath}/src/getPatch.js`)
+
+    options.key = options.anthropic_api_key || options.openai_api_key
+    options.models = options.bedrock_aws_iam_role_arn
+      ? options.bedrock_models
+      : options.anthropic_api_key
+        ? options.anthropic_models
+        : options.openai_models
+
+    debug = options.debug ? (options.debug === 'true') : debug
+
+    if (debug) {
+      console.log(`Using options: ${JSON.stringify(options)}`)
+      console.log(`Using config: ${JSON.stringify(config)}`)
+      console.log(`Using properties: ${JSON.stringify(properties)}`)
+      console.log(`Using inputs: ${JSON.stringify(inputs)}`)
+    }
+
     const patch = await getPatch({
       owner: options.owner,
       repo: options.repo,
