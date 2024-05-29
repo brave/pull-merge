@@ -12,7 +12,7 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
   if (debug) console.log('Initializing puLL-Merge')
 
   const config = await getConfig({ owner: context.repo.owner, repo: context.repo.repo, path: '.github/pull-merge.json', debug, github })
-  const properties = await getProperties({ owner: context.repo.owner, repo: context.repo.repo, debug, github })
+  const properties = await getProperties({ owner: context.repo.owner, repo: context.repo.repo, debug, github, prefix: 'pull_merge_' })
 
   const options = Object.assign({
     debounce_time: '6',

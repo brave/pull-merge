@@ -1,4 +1,4 @@
-export default async function getProperties ({ owner, repo, github, githubToken, debug = false }) {
+export default async function getProperties ({ owner, repo, github, githubToken, debug = false, prefix = '' }) {
   if (!github && githubToken) {
     const { Octokit } = await import('@octokit/core')
 
@@ -14,10 +14,27 @@ export default async function getProperties ({ owner, repo, github, githubToken,
       }
     })
     if (debug) console.log(properties)
-    return properties.data.reduce((acc, cur) => {
-      acc[cur.property_name] = cur.value
-      return acc
-    }, {})
+
+    const output = {}
+
+    // copy properties not starting with prefix to output
+    properties.data.forEach(c => {
+      if (!c.property_name.startsWith(prefix)) {
+        output[c.property_name] = c.value
+      }
+    })
+
+    // copy properties starting with prefix to output
+    if (prefix) {
+      properties.data.forEach(c => {
+        if (c.property_name.startsWith(prefix)) {
+          const name = c.property_name.substring(prefix.length)
+          output[name] = c.value
+        }
+      })
+    }
+
+    return output
   } catch (err) {
     console.log(err)
     return {}
