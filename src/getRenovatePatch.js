@@ -36,18 +36,20 @@ export default async function getRenovatePatch ({
   }
   const result = await github.graphql(prbodyQuery, prbodyVariables)
 
+  if (debug) { console.log(result) }
+
   // https://github.com/semgrep/semgrep/compare/v1.53.0..v1.54.0.diff
 
-  const sixthLine = result.repository.pullRequest.body.split('\n')[6].split(/\|/).filter(Boolean).map(x => x.trim())
-  let [link, versions] = sixthLine
+  const changeLine = result.repository.pullRequest.body.split('\n')[4].split(/\|/).filter(Boolean).map(x => x.trim())
+  let [link, versions] = changeLine
 
   if (versions === 'action') {
-    versions = sixthLine[3]
+    versions = changeLine[3]
   }
 
   versions = markdownToTxt(versions)
 
-  link = link.replace(/^.*https:\/\/to/, 'https://').replace(/\).*$/, '').replace(/\/releases$/, '')
+  link = link.replace(/^.*https:\/\/redirect\./, 'https://').replace(/\).*$/, '').replace(/\/releases$/, '')
 
   // get last two elements of an array
   const [tOrg, tRepo] = link.split('/').filter(Boolean).slice(-2)
@@ -76,7 +78,7 @@ export default async function getRenovatePatch ({
   const toFiltered = tags.filter(x => x.endsWith(to))[0]
 
   if (debug) {
-    console.log(`sixthLine: ${sixthLine}`)
+    console.log(`changeLine: ${changeLine}`)
     console.log(`link: ${link}, versions: ${versions}`)
   }
 
