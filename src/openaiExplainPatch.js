@@ -7,7 +7,7 @@ export default async function explainPatch ({
   apiKey, patchBody, owner, repo,
   models = ['gpt-4o-2024-05-13', 'gpt-3.5-turbo-0125'],
   system = SYSTEM_PROMPT,
-  max_tokens = 2048,
+  max_tokens = 3072,
   temperature = 1,
   top_p = 1,
   frequency_penalty = 0,

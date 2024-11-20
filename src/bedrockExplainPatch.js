@@ -48,7 +48,7 @@ export default async function explainPatch ({
   patchBody, owner, repo,
   models = ['anthropic.claude-3-5-sonnet-20240620-v1:0'],
   system = SYSTEM_PROMPT,
-  max_tokens = 2048,
+  max_tokens = 3072,
   temperature = 1,
   top_p = 1,
   amplification = 2,
