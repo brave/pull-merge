@@ -7,7 +7,7 @@ export default async function explainPatch ({
   apiKey, patchBody, owner, repo,
   models = ['claude-3-5-sonnet-20240620'],
   system = SYSTEM_PROMPT,
-  max_tokens = 2048,
+  max_tokens = 3072,
   temperature = 1,
   top_p = 1,
   amplification = 2,

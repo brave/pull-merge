@@ -24,7 +24,7 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
     owner: context.repo.owner,
     repo: context.repo.repo,
     prnum: context.issue.number,
-    max_tokens: '2048',
+    max_tokens: '3072',
     subtle_mode: 'false'
   }, config, properties, inputs)
 
