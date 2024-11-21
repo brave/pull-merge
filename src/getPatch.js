@@ -46,16 +46,6 @@ export default async function getPatch ({
     } catch (err) {
       console.log(err)
 
-      // since we failed to get the diff, we will try to get the PR body through cloning the source code
-      const { data: repoResponse } = await github.request('GET /repos/{owner}/{repo}', {
-        owner,
-        repo,
-        pull_number: prnum,
-        headers: {
-          'X-GitHub-Api-Version': '2022-11-28'
-        }
-      })
-
       const { data: prResponse } = await github.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
         owner,
         repo,
@@ -69,7 +59,7 @@ export default async function getPatch ({
       })
 
       // clone the repo
-      const cloneUrl = repoResponse.clone_url
+      const cloneUrl = `git@github.com:${owner}/${repo}.git`
       const clonePath = path.join(os.tmpdir(), `pr-${prnum}`)
 
       console.log(`Cloning ${cloneUrl} to ${clonePath}, manually`)
