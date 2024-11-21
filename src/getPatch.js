@@ -16,6 +16,10 @@ export default async function getPatch ({
     github = new Octokit({ auth: githubToken })
   }
 
+  if (!githubToken) {
+    githubToken = process.env.GITHUB_TOKEN
+  }
+
   if (debug) { console.log(`getPatch ${owner} ${repo} ${prnum}`) }
 
   let patchBody = null
@@ -59,10 +63,9 @@ export default async function getPatch ({
       })
 
       // clone the repo
-      const cloneUrl = `git@github.com:${owner}/${repo}.git`
+      const cloneUrl = `https://${githubToken}@github.com/${owner}/${repo}.git`
       const clonePath = path.join(os.tmpdir(), `pr-${prnum}`)
 
-      console.log(`Cloning ${cloneUrl} to ${clonePath}, manually`)
       execSync(`git clone ${cloneUrl} ${clonePath}`)
 
       // save current directory
