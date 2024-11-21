@@ -1,3 +1,8 @@
+import { promises as fs } from 'fs'
+import path from 'path'
+import os from 'os'
+import { execSync } from 'child_process'
+
 export default async function getPatch ({
   owner, repo, prnum,
   githubToken = null,
@@ -9,6 +14,10 @@ export default async function getPatch ({
     const { Octokit } = await import('@octokit/core')
 
     github = new Octokit({ auth: githubToken })
+  }
+
+  if (!githubToken) {
+    githubToken = process.env.GITHUB_TOKEN
   }
 
   if (debug) { console.log(`getPatch ${owner} ${repo} ${prnum}`) }
@@ -24,17 +33,57 @@ export default async function getPatch ({
 
     patchBody = await patchResponse.text()
   } else {
-    const { data: pBody } = await github.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
-      owner,
-      repo,
-      pull_number: prnum,
-      headers: {
-        'X-GitHub-Api-Version': '2022-11-28'
-      },
-      mediaType: {
-        format: 'diff'
-      }
-    })
+    try {
+      const { data: pBody } = await github.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
+        owner,
+        repo,
+        pull_number: prnum,
+        headers: {
+          'X-GitHub-Api-Version': '2022-11-28'
+        },
+        mediaType: {
+          format: 'diff'
+        }
+      })
+
+      patchBody = pBody
+    } catch (err) {
+      console.log(err)
+
+      const { data: prResponse } = await github.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
+        owner,
+        repo,
+        pull_number: prnum,
+        headers: {
+          'X-GitHub-Api-Version': '2022-11-28'
+        },
+        mediaType: {
+          format: 'json'
+        }
+      })
+
+      // clone the repo
+      const clonePath = path.join(os.tmpdir(), `pr-${prnum}`)
+
+      execSync(`gh repo clone ${owner}/${repo} ${clonePath}`, { env: process.env })
+
+      // save current directory
+      const currentDir = process.cwd()
+
+      // change dir to the new created repo
+      process.chdir(clonePath)
+
+      // generate the PR diff
+      const targetBranch = prResponse.base.ref
+      const sourceBranch = prResponse.head.ref
+      execSync(`git diff origin/${sourceBranch} origin/${targetBranch} > pr.diff`)
+
+      patchBody = await fs.readFile(path.join(clonePath, 'pr.diff'), 'utf8')
+
+      // get back to previous directory and delete the cloned repo
+      process.chdir(currentDir)
+      await fs.rm(clonePath, { recursive: true })
+    }
 
     const { data: repoResponse } = await github.request('GET /repos/{owner}/{repo}', {
       owner,
@@ -48,8 +97,6 @@ export default async function getPatch ({
     if (!runIfPrivate && (repoResponse.private || repoResponse.visibility === 'private')) {
       throw new Error('This repo is private, and you have not enabled runIfPrivate')
     }
-
-    patchBody = pBody
   }
 
   return {
