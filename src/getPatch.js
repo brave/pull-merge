@@ -16,10 +16,6 @@ export default async function getPatch ({
     github = new Octokit({ auth: githubToken })
   }
 
-  if (!githubToken) {
-    githubToken = process.env.GITHUB_TOKEN
-  }
-
   if (debug) { console.log(`getPatch ${owner} ${repo} ${prnum}`) }
 
   let patchBody = null

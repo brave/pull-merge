@@ -75,7 +75,8 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
       prnum: options.prnum,
       debug,
       runIfPrivate: options.run_if_private,
-      github
+      github,
+      githubToken: options.github_token // fallback to token use when downloading private repos
     })
 
     const filteredPatch = await filterdiff({
