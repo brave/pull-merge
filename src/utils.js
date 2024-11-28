@@ -64,15 +64,10 @@ export async function explainPatchHelper (patchBody, owner, repo, models, debug,
 
   response = response.replaceAll('### Changes', '<details>\n<summary><i>Changes</i></summary>\n\n### Changes')
 
-  let firstDiagram = diagrams.shift()
-  if (!firstDiagram) {
-    firstDiagram = ''
-  }
-
   if (re.test(response)) {
-    response = response.replaceAll(/(### Changes[\s\S]*?\n)###\s/g, `$1\n\n${diagrams.join('\n')}\n\n</details>\n\n${firstDiagram}\n\n### `)
+    response = response.replaceAll(/(### Changes[\s\S]*?\n)###\s/g, `$1${diagrams.join('\n')}\n</details>\n\n### `)
   } else {
-    response += `\n\n${diagrams.join('\n')}\n\n</details>\n\n${firstDiagram}\n\n`
+    response += `${diagrams.join('\n')}\n</details>`
   }
 
   response = response.replaceAll('### C4 Diagram', '')
