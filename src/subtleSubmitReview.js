@@ -49,10 +49,10 @@ export default async function subtleSubmitReview ({
     name: repo,
     prnumber: prnum
   }
-  const msg = (await github.graphql(query, variables)).repository.pullRequest
+  const msgPre = (await github.graphql(query, variables)).repository.pullRequest
 
   // debounce if the PR description contains a watermark and the debounce time is not expired yet
-  if (msg.body.includes(watermark) && !isOlderThanXHours(msg.updatedAt, debounceTime)) {
+  if (msgPre.body.includes(watermark) && !isOlderThanXHours(msgPre.updatedAt, debounceTime)) {
     throw new Error('debounce')
   }
 
@@ -65,6 +65,8 @@ export default async function subtleSubmitReview ({
 
   const newExplaination = '<details><summary>AI Review</summary>' + '\n\n' + watermark + '\n\n' + await explainPatch() + '</details>'
 
+  // fetch the message twice, to decrease the chances of race condition, but still debounce
+  const msg = (await github.graphql(query, variables)).repository.pullRequest
   const newBody = msg.body.match(re)
     ? msg.body.replace(re, newExplaination)
     : msg.body + '\n\n' + newExplaination
