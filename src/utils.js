@@ -15,10 +15,6 @@ Desired format:
 <list_of_changes> // Describe the main changes in the PR, organizing them by filename
 
 \`\`\`mermaid
-<c4_diagram> // Generate a C4 diagram in mermaid format for the PR included
-\`\`\`
-
-\`\`\`mermaid
 <sequence_diagram> // Generate a sequence diagram in mermaid format for the PR included
 \`\`\`
 \n`
