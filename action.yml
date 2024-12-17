@@ -60,6 +60,10 @@ inputs:
     description: |
       AWS region to interact with the Bedrock endpoint
     default: ""
+  include_diff:
+    description: |
+      Include the diff in the generated text
+    required: false
 # outputs:
 runs:
   using: 'composite'

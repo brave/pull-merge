@@ -25,7 +25,8 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
     repo: context.repo.repo,
     prnum: context.issue.number,
     max_tokens: '3072',
-    subtle_mode: 'false'
+    subtle_mode: 'false',
+    include_diff: 'false'
   }, config, properties, inputs)
 
   // convert to numbers some options
@@ -34,6 +35,7 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
   options.prnum = parseFloat(options.prnum, 10)
   options.max_tokens = parseFloat(options.max_tokens, 10)
   options.subtle_mode = options.subtle_mode === 'true'
+  options.include_diff = options.include_diff === 'true'
 
   const { default: explainPatch } =
     options.bedrock_aws_iam_role_arn
@@ -106,7 +108,9 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
           : `openai debug - ${watermark}`
     }
 
-    const header = '<details><summary>Diff</summary>\n\n```diff\n\n' + filteredPatch + '\n\n```\n\n</details>'
+    const header = options.include_diff
+      ? '<details><summary>Diff</summary>\n\n```diff\n\n' + filteredPatch + '\n\n```\n\n</details>'
+      : ''
 
     await submitReview({
       owner: options.owner,
