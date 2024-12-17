@@ -106,11 +106,14 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
           : `openai debug - ${watermark}`
     }
 
+    const header = '<details><summary>Diff</summary>\n\n```diff\n\n' + filteredPatch + '\n\n```\n\n</details>'
+
     await submitReview({
       owner: options.owner,
       repo: options.repo,
       prnum: options.prnum,
       watermark,
+      header,
       explainPatch: explainPatchCb,
       debounceTime: options.debounce_time,
       debug,
