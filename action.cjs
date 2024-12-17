@@ -108,7 +108,7 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
           : `openai debug - ${watermark}`
     }
 
-    const header = options.include_diff
+    const header = options.include_diff || context.actor.endsWith('[bot]')
       ? '<details><summary>Diff</summary>\n\n```diff\n\n' + filteredPatch + '\n\n```\n\n</details>'
       : ''
 
