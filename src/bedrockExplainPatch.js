@@ -3,6 +3,10 @@ import {
   BedrockRuntimeClient,
   InvokeModelCommand
 } from '@aws-sdk/client-bedrock-runtime'
+import {
+  SSMClient,
+  GetParameterCommand
+} from '@aws-sdk/client-ssm'
 import { SYSTEM_PROMPT, explainPatchHelper } from './utils.js'
 
 const COUNT_TOKENS_HASHFUN = {
@@ -19,6 +23,7 @@ const COUNT_TOKENS_HASHFUN = {
   'anthropic.claude-3-haiku-20240307-v1:0': anthropicCountTokens,
   'anthropic.claude-3-opus-20240229-v1:0': anthropicCountTokens,
   'anthropic.claude-instant-v1': anthropicCountTokens,
+  'anthropic.claude-3-7-sonnet-20250219-v1:0': anthropicCountTokens,
   'ai21.j2-mid-v1': null,
   'ai21.j2-ultra-v1': null,
   'cohere.command-text-v14': null,
@@ -47,7 +52,7 @@ const countTokens = (text, modelId) => {
 /* eslint-disable camelcase */
 export default async function explainPatch ({
   patchBody, owner, repo,
-  models = ['anthropic.claude-3-5-sonnet-20241022-v2:0'],
+  models = ['anthropic.claude-3-7-sonnet-20250219-v1:0'],
   system = SYSTEM_PROMPT,
   max_tokens = 3072,
   temperature = 1,
@@ -57,6 +62,25 @@ export default async function explainPatch ({
   debug = false
 }) {
   const client = new BedrockRuntimeClient({ region })
+  const ssmClient = new SSMClient({ region })
+
+  // Fetch inference profile ARN from SSM Parameter Store
+  let inferenceProfileArn = null
+  try {
+    const getParamCommand = new GetParameterCommand({
+      Name: '/pull-merge/inference-profile-arn'
+    })
+    const response = await ssmClient.send(getParamCommand)
+    inferenceProfileArn = response.Parameter.Value
+    if (debug) {
+      console.log(`Using inference profile ARN: ${inferenceProfileArn}`)
+    }
+  } catch (error) {
+    if (debug) {
+      console.log(`Failed to retrieve inference profile ARN: ${error.message}`)
+    }
+    // Continue without an inference profile if not available
+  }
 
   return await explainPatchHelper(
     patchBody, owner, repo, models, debug,
@@ -66,7 +90,7 @@ export default async function explainPatch ({
       if (pLen === 0) { throw new Error('The patch is empty, cannot summarize!') }
       if (pLen < amplification * max_tokens) { throw new Error('The patch is trivial, no need for a summarization') }
 
-      const command = new InvokeModelCommand({
+      const commandParams = {
         modelId: model,
         contentType: 'application/json',
         accept: 'application/json',
@@ -83,7 +107,14 @@ export default async function explainPatch ({
             }
           ]
         })
-      })
+      }
+
+      // Add inference profile if available
+      if (inferenceProfileArn) {
+        commandParams.modelId = inferenceProfileArn
+      }
+
+      const command = new InvokeModelCommand(commandParams)
 
       const rawResonse = await client.send(command)
       const textResponse = new TextDecoder().decode(rawResonse.body)
