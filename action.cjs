@@ -109,7 +109,7 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
     }
 
     const header = options.include_diff || context.actor.endsWith('[bot]')
-      ? '<details><summary>Diff</summary>\n\n```diff\n\n' + filteredPatch.replace('```', '\\`\\`\\`') + '\n\n```\n\n</details>'
+      ? '<details><summary>Diff</summary>\n\n````````````diff\n\n' + filteredPatch + '\n\n````````````\n\n</details>'
       : ''
 
     await submitReview({
