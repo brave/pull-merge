@@ -24,6 +24,8 @@ const COUNT_TOKENS_HASHFUN = {
   'anthropic.claude-3-opus-20240229-v1:0': anthropicCountTokens,
   'anthropic.claude-instant-v1': anthropicCountTokens,
   'anthropic.claude-3-7-sonnet-20250219-v1:0': anthropicCountTokens,
+  'anthropic.claude-sonnet-4-20250514-v1:0': anthropicCountTokens,
+  'anthropic.claude-opus-4-20250514-v1:0': anthropicCountTokens,
   'ai21.j2-mid-v1': null,
   'ai21.j2-ultra-v1': null,
   'cohere.command-text-v14': null,
