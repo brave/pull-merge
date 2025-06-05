@@ -11,6 +11,10 @@ Desired format:
 ### Security Hotspots
 <list_of_security_hotspots> // Describe locations for possible vulnerabilities in the change, ordered by risk. Do not include a vulnerability unless it is likely to present a real security risk. If there are none, omit this section.
 
+### Privacy Hotspots
+
+<list_of_privacy_hotspots> // Describe locations for possible privacy issues in the change, ordered by risk. Do not include a privacy issues unless it is likely to present a real privacy risk, either in the code or in the documentation. If there are none, omit this section.
+
 ### Changes
 <list_of_changes> // Describe the main changes in the PR, organizing them by filename
 
