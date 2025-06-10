@@ -37,6 +37,10 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
   options.subtle_mode = options.subtle_mode === 'true'
   options.include_diff = options.include_diff === 'true'
 
+  if (!options.bedrock_aws_iam_role_arn && options.run_if_private) {
+    throw new Error('impossible state: should only run on private repositories using bedrock')
+  }
+
   const { default: explainPatch } =
     options.bedrock_aws_iam_role_arn
       ? await import(`${actionPath}/src/bedrockExplainPatch.js`)
