@@ -13,7 +13,8 @@ export default async function explainPatch ({
   frequency_penalty = 0,
   presence_penalty = 0,
   amplification = 2,
-  debug = false
+  debug = false,
+  include_diff = false
 }) {
   const openai = new OpenAI({ apiKey })
 
@@ -24,7 +25,12 @@ export default async function explainPatch ({
       const pLen = enc.encode(patchBody).length
 
       if (pLen === 0) { throw new Error('The patch is empty, cannot summarize!') }
-      if (pLen < amplification * max_tokens) { throw new Error('The patch is trivial, no need for a summarization') }
+      if (pLen < amplification * max_tokens) {
+        if (include_diff) {
+          return ''
+        }
+        throw new Error('The patch is trivial, no need for a summarization')
+      }
 
       const aiResponse = await openai.chat.completions.create({
         model,

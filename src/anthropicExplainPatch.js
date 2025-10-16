@@ -11,11 +11,15 @@ export default async function explainPatch ({
   temperature = 1,
   top_p = 1,
   amplification = 2,
-  debug = false
+  debug = false,
+  include_diff = false
 }) {
   const pLen = countTokens(patchBody)
   if (pLen === 0) { throw new Error('The patch is empty, cannot summarize!') }
   if (pLen < amplification * max_tokens) {
+    if (include_diff) {
+      return ''
+    }
     throw new Error('The patch is trivial, no need for a summarization')
   }
 
