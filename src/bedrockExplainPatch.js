@@ -61,7 +61,8 @@ export default async function explainPatch ({
   top_p = 1,
   amplification = 2,
   region = 'us-east-1',
-  debug = false
+  debug = false,
+  include_diff = false
 }) {
   const client = new BedrockRuntimeClient({ region })
   const ssmClient = new SSMClient({ region })
@@ -90,7 +91,12 @@ export default async function explainPatch ({
       const pLen = countTokens(patchBody, model)
 
       if (pLen === 0) { throw new Error('The patch is empty, cannot summarize!') }
-      if (pLen < amplification * max_tokens) { throw new Error('The patch is trivial, no need for a summarization') }
+      if (pLen < amplification * max_tokens) {
+        if (include_diff) {
+          return ''
+        }
+        throw new Error('The patch is trivial, no need for a summarization')
+      }
 
       const commandParams = {
         modelId: model,

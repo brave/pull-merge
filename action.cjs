@@ -99,7 +99,8 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
       models: options.models.split(' '),
       amplification: options.amplification,
       max_tokens: options.max_tokens,
-      region: options.region
+      region: options.region,
+      include_diff: options.include_diff
     })
 
     let watermark = patch.watermark
