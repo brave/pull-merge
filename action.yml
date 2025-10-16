@@ -84,7 +84,7 @@ runs:
       run: cd ${{ github.action_path }}; npm ci
       shell: bash
     - id: llm-and-post-message
-      uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
       if: ${{ !contains(github.event.pull_request.labels.*.name, 'CI/skip-llm') && !contains(github.event.pull_request.labels.*.name, 'CI/skip') && github.event.pull_request.draft == false }}
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
