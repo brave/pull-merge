@@ -26,6 +26,7 @@ const COUNT_TOKENS_HASHFUN = {
   'anthropic.claude-3-7-sonnet-20250219-v1:0': anthropicCountTokens,
   'anthropic.claude-sonnet-4-20250514-v1:0': anthropicCountTokens,
   'anthropic.claude-opus-4-20250514-v1:0': anthropicCountTokens,
+  'anthropic.claude-sonnet-4-5-20250929-v1:0': anthropicCountTokens,
   'ai21.j2-mid-v1': null,
   'ai21.j2-ultra-v1': null,
   'cohere.command-text-v14': null,
@@ -58,7 +59,6 @@ export default async function explainPatch ({
   system = SYSTEM_PROMPT,
   max_tokens = 3072,
   temperature = 1,
-  top_p = 1,
   amplification = 2,
   region = 'us-east-1',
   debug = false,
@@ -106,7 +106,6 @@ export default async function explainPatch ({
           anthropic_version: 'bedrock-2023-05-31',
           max_tokens,
           temperature,
-          top_p,
           system,
           messages: [
             {

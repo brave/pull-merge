@@ -9,7 +9,6 @@ export default async function explainPatch ({
   system = SYSTEM_PROMPT,
   max_tokens = 3072,
   temperature = 1,
-  top_p = 1,
   amplification = 2,
   debug = false,
   include_diff = false
@@ -32,7 +31,6 @@ export default async function explainPatch ({
         max_tokens,
         temperature,
         model,
-        top_p,
         system,
         messages: [
           {
