@@ -9,7 +9,7 @@
         "lint-fix": "standard --fix"
     },
     "dependencies": {
-        "@anthropic-ai/sdk": "0.67.0",
+        "@anthropic-ai/sdk": "0.68.0",
         "@anthropic-ai/tokenizer": "^0.0.4",
         "@aws-sdk/client-bedrock-runtime": "^3.621.0",
         "@aws-sdk/client-ssm": "^3.782.0",
