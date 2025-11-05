@@ -64,6 +64,10 @@ inputs:
     description: |
       Include the diff in the generated text
     required: false
+  system_prompt:
+    description: |
+      Custom system prompt for the LLM. If not provided, uses the default from utils.js
+    required: false
 # outputs:
 runs:
   using: 'composite'
