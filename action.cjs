@@ -2,6 +2,7 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
   const { default: filterdiff } = await import(`${actionPath}/src/filterdiff.js`)
   const { default: getConfig } = await import(`${actionPath}/src/getConfig.js`)
   const { default: getProperties } = await import(`${actionPath}/src/getProperties.js`)
+  const { SYSTEM_PROMPT } = await import(`${actionPath}/src/utils.js`)
 
   const raise = (message) => { throw new Error(message) }
 
@@ -26,7 +27,8 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
     prnum: context.issue.number,
     max_tokens: '3072',
     subtle_mode: 'false',
-    include_diff: 'false'
+    include_diff: 'false',
+    system_prompt: SYSTEM_PROMPT
   }, config, properties, inputs)
 
   // convert to numbers some options
@@ -100,7 +102,8 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
       amplification: options.amplification,
       max_tokens: options.max_tokens,
       region: options.region,
-      include_diff: options.include_diff
+      include_diff: options.include_diff,
+      system: options.system_prompt
     })
 
     let watermark = patch.watermark
