@@ -5,7 +5,7 @@ import { SYSTEM_PROMPT, explainPatchHelper } from './utils.js'
 /* eslint-disable camelcase */
 export default async function explainPatch ({
   apiKey, patchBody, owner, repo,
-  models = ['claude-sonnet-4-20250514'],
+  models = ['claude-sonnet-4-5-20250929'],
   system = SYSTEM_PROMPT,
   max_tokens = 3072,
   temperature = 1,
