@@ -73,10 +73,12 @@ export default async function getPatch ({
       // change dir to the new created repo
       process.chdir(clonePath)
 
-      // generate the PR diff
-      const targetBranch = prResponse.base.ref
-      const sourceBranch = prResponse.head.ref
-      execSync(`git diff origin/${sourceBranch} origin/${targetBranch} > pr.diff`)
+      // generate the PR diff using commit SHAs from the PR
+      const baseSha = prResponse.base.sha
+      const headSha = prResponse.head.sha
+
+      // diff between base and head commits
+      execSync(`git diff ${baseSha} ${headSha} > pr.diff`)
 
       patchBody = await fs.readFile(path.join(clonePath, 'pr.diff'), 'utf8')
 
