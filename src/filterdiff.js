@@ -23,7 +23,7 @@ export default async function filterdiff ({ content, args = ['--exclude=**/packa
 
   await new Promise((resolve) => cp.on('close', resolve))
 
-  if (error.length > 0) { throw new Error(error.join()) }
+  if (error.length > 0) { throw new Error(Buffer.concat(error).toString()) }
 
-  return output.join()
+  return Buffer.concat(output).toString()
 }
