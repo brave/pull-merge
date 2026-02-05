@@ -10,28 +10,43 @@ async function fetchLatestModels () {
   const response = await fetch('https://docs.claude.com/en/docs/about-claude/models/overview')
   const html = await response.text()
 
-  // Extract the latest Sonnet model identifiers from the HTML
+  // Extract the latest model identifiers from the HTML for Sonnet, Haiku, and Opus
   // Looking for patterns like:
-  // - claude-sonnet-4-20250514 (single version)
-  // - claude-sonnet-4-5-20250929 (with minor version)
-  // - anthropic.claude-sonnet-4-20250514-v1:0
-  // - anthropic.claude-sonnet-4-5-20250929-v1:0
-  const anthropicMatch = html.match(/claude-sonnet-\d+(?:-\d+)?-\d{8}/g)
-  const bedrockMatch = html.match(/anthropic\.claude-sonnet-\d+(?:-\d+)?-\d{8}-v1:0/g)
+  // - claude-{sonnet|haiku|opus}-4-6 (version without date)
+  // - claude-{sonnet|haiku|opus}-4-20250514 (single version with date)
+  // - claude-{sonnet|haiku|opus}-4-5-20250929 (with minor version and date)
+  // - anthropic.claude-{sonnet|haiku|opus}-4-6-v1:0
+  // - anthropic.claude-{sonnet|haiku|opus}-4-20250514-v1:0
+  // - anthropic.claude-{sonnet|haiku|opus}-4-5-20250929-v1:0
+  
+  const modelTypes = ['sonnet', 'haiku', 'opus']
+  const models = {}
 
-  if (!anthropicMatch || !bedrockMatch) {
-    throw new Error('Could not find Sonnet model identifiers in the documentation')
+  for (const modelType of modelTypes) {
+    // Match both formats: with date (claude-opus-4-5-20250929) and without date (claude-opus-4-6)
+    const anthropicPattern = new RegExp(`claude-${modelType}-\\d+(?:-\\d+)?(?:-\\d{8})?`, 'g')
+    const bedrockPattern = new RegExp(`anthropic\\.claude-${modelType}-\\d+(?:-\\d+)?(?:-\\d{8})?-v1:0`, 'g')
+    
+    const anthropicMatch = html.match(anthropicPattern)
+    const bedrockMatch = html.match(bedrockPattern)
+
+    if (anthropicMatch && bedrockMatch) {
+      // Get the most recent model (first occurrence, as docs list newest first)
+      models[modelType] = {
+        anthropic: anthropicMatch[0],
+        // Bedrock models should use global inference profiles: global.anthropic.claude-...
+        bedrock: `global.${bedrockMatch[0]}`
+      }
+    } else {
+      console.warn(`Warning: Could not find ${modelType} model identifiers in the documentation`)
+    }
   }
 
-  // Get the most recent model (first occurrence, as docs list newest first)
-  const latestAnthropicModel = anthropicMatch[0]
-  // Bedrock models should use global inference profiles: global.anthropic.claude-...
-  const latestBedrockModel = `global.${bedrockMatch[0]}`
-
-  return {
-    anthropic: latestAnthropicModel,
-    bedrock: latestBedrockModel
+  if (Object.keys(models).length === 0) {
+    throw new Error('Could not find any Claude model identifiers in the documentation')
   }
+
+  return models
 }
 
 async function updateFile (filePath, updates) {
@@ -52,13 +67,23 @@ async function updateFile (filePath, updates) {
 
 async function main () {
   try {
-    console.log('Fetching latest Anthropic Sonnet model identifiers...')
+    console.log('Fetching latest Anthropic model identifiers...')
     const models = await fetchLatestModels()
 
-    console.log(`Latest Anthropic Sonnet model: ${models.anthropic}`)
-    console.log(`Latest Bedrock Sonnet model: ${models.bedrock}`)
+    // Display found models
+    for (const [modelType, modelIds] of Object.entries(models)) {
+      console.log(`Latest ${modelType} models:`)
+      console.log(`  Anthropic API: ${modelIds.anthropic}`)
+      console.log(`  Bedrock: ${modelIds.bedrock}`)
+    }
 
     let hasChanges = false
+
+    // Determine which model to use as default (prefer order: opus, sonnet, haiku)
+    const defaultModel = models.opus || models.sonnet || models.haiku
+    if (!defaultModel) {
+      throw new Error('No models found to set as default')
+    }
 
     // Update action.cjs
     console.log('\nUpdating action.cjs...')
@@ -66,12 +91,12 @@ async function main () {
       join(rootDir, 'action.cjs'),
       [
         {
-          search: /anthropic_models: 'claude-sonnet-\d+(?:-\d+)?-\d{8}'/,
-          replace: `anthropic_models: '${models.anthropic}'`
+          search: /anthropic_models: 'claude-(?:sonnet|haiku|opus)-\d+(?:-\d+)?(?:-\d{8})?'/,
+          replace: `anthropic_models: '${defaultModel.anthropic}'`
         },
         {
-          search: /bedrock_models: 'global\.anthropic\.claude-sonnet-\d+(?:-\d+)?-\d{8}-v1:0'/,
-          replace: `bedrock_models: '${models.bedrock}'`
+          search: /bedrock_models: 'global\.anthropic\.claude-(?:sonnet|haiku|opus)-\d+(?:-\d+)?(?:-\d{8})?-v1:0'/,
+          replace: `bedrock_models: '${defaultModel.bedrock}'`
         }
       ]
     )
@@ -88,8 +113,8 @@ async function main () {
       join(rootDir, 'src/anthropicExplainPatch.js'),
       [
         {
-          search: /models = \['claude-sonnet-\d+(?:-\d+)?-\d{8}'\]/,
-          replace: `models = ['${models.anthropic}']`
+          search: /models = \['claude-(?:sonnet|haiku|opus)-\d+(?:-\d+)?(?:-\d{8})?'\]/,
+          replace: `models = ['${defaultModel.anthropic}']`
         }
       ]
     )
@@ -103,23 +128,25 @@ async function main () {
     // Update bedrockExplainPatch.js
     console.log('\nUpdating bedrockExplainPatch.js...')
 
-    // First, check if we need to add the model to COUNT_TOKENS_HASHFUN
+    // First, check if we need to add models to COUNT_TOKENS_HASHFUN
     const bedrockContent = await readFile(join(rootDir, 'src/bedrockExplainPatch.js'), 'utf-8')
-    const needsCountTokensEntry = !bedrockContent.includes(`'${models.bedrock}': anthropicCountTokens`)
-
+    
     const bedrockUpdates = [
       {
-        search: /models = \['global\.anthropic\.claude-(?:3-7-sonnet-\d{8}|sonnet-\d+(?:-\d+)?-\d{8})-v1:0'\]/,
-        replace: `models = ['${models.bedrock}']`
+        search: /models = \['(?:global\.)?anthropic\.claude-(?:3-7-sonnet-\d{8}|(?:sonnet|haiku|opus)-\d+(?:-\d+)?(?:-\d{8})?)-v1:0'\]/,
+        replace: `models = ['${defaultModel.bedrock}']`
       }
     ]
 
-    // Add COUNT_TOKENS_HASHFUN entry if needed
-    if (needsCountTokensEntry) {
-      bedrockUpdates.push({
-        search: /('global\.anthropic\.claude-sonnet-\d+(?:-\d+)?-\d{8}-v1:0': anthropicCountTokens,)\n/,
-        replace: `$1\n  '${models.bedrock}': anthropicCountTokens,\n`
-      })
+    // Add COUNT_TOKENS_HASHFUN entries for any models not already present
+    for (const [modelType, modelIds] of Object.entries(models)) {
+      if (!bedrockContent.includes(`'${modelIds.bedrock}': anthropicCountTokens`)) {
+        // Find the last anthropic model entry and add after it
+        bedrockUpdates.push({
+          search: /('(?:global\.)?anthropic\.claude-(?:sonnet|haiku|opus)-\d+(?:-\d+)?(?:-\d{8})?-v1:0': anthropicCountTokens,)\n/,
+          replace: `$1\n  '${modelIds.bedrock}': anthropicCountTokens,\n`
+        })
+      }
     }
 
     const bedrockUpdated = await updateFile(
@@ -128,8 +155,8 @@ async function main () {
     )
     if (bedrockUpdated) {
       console.log('✓ Updated bedrockExplainPatch.js')
-      if (needsCountTokensEntry) {
-        console.log('  - Added model to COUNT_TOKENS_HASHFUN')
+      if (bedrockUpdates.length > 1) {
+        console.log(`  - Added ${bedrockUpdates.length - 1} model(s) to COUNT_TOKENS_HASHFUN`)
       }
       hasChanges = true
     } else {

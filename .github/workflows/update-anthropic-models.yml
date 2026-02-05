@@ -51,15 +51,15 @@ jobs:
 
           # Commit changes
           git add action.cjs src/anthropicExplainPatch.js src/bedrockExplainPatch.js
-          git commit -m "Update Anthropic Sonnet model identifiers"
+          git commit -m "Update Anthropic model identifiers"
 
           # Push branch
           git push origin ${BRANCH_NAME} --force
 
           # Create PR (will fail gracefully if PR already exists)
           gh pr create \
-            --title "Update Anthropic Sonnet model identifiers" \
-            --body "This PR automatically updates the Anthropic Sonnet model identifiers to the latest versions based on the [official documentation](https://docs.claude.com/en/docs/about-claude/models/overview).
+            --title "Update Anthropic model identifiers" \
+            --body "This PR automatically updates the Anthropic model identifiers (Sonnet, Haiku, Opus) to the latest versions based on the [official documentation](https://docs.claude.com/en/docs/about-claude/models/overview).
 
           ## Changes
           - Updated \`action.cjs\` with latest model identifiers
