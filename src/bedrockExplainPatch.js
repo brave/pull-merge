@@ -27,6 +27,7 @@ const COUNT_TOKENS_HASHFUN = {
   'anthropic.claude-sonnet-4-20250514-v1:0': anthropicCountTokens,
   'anthropic.claude-opus-4-20250514-v1:0': anthropicCountTokens,
   'global.anthropic.claude-sonnet-4-5-20250929-v1:0': anthropicCountTokens,
+  'global.anthropic.claude-haiku-4-5-20251001-v1:0': anthropicCountTokens,
   'global.anthropic.claude-opus-4-5-20251101-v1:0': anthropicCountTokens,
   'ai21.j2-mid-v1': null,
   'ai21.j2-ultra-v1': null,
@@ -56,7 +57,7 @@ const countTokens = (text, modelId) => {
 /* eslint-disable camelcase */
 export default async function explainPatch ({
   patchBody, owner, repo,
-  models = ['anthropic.claude-3-7-sonnet-20250219-v1:0'],
+  models = ['global.anthropic.claude-opus-4-5-20251101-v1:0'],
   system = SYSTEM_PROMPT,
   max_tokens = 3072,
   temperature = 1,
