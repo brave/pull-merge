@@ -19,7 +19,7 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
     debounce_time: '6',
     amplification: '4',
     filterdiff_args: '--exclude=**/package-lock.json --exclude=**/yarn.lock --exclude=**/*.js.map --exclude=**/*.svg --exclude=**/test/data/**/* --exclude=**/docs/**/* --exclude=**/deploy/**/* --exclude=**/.htpasswd',
-    openai_models: 'gpt-4o-2024-05-13 gpt-3.5-turbo-0125',
+    openai_models: 'gpt-5.3-codex',
     anthropic_models: 'claude-opus-4-6',
     bedrock_models: 'global.anthropic.claude-opus-4-6-v1:0',
     owner: context.repo.owner,
