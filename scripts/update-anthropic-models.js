@@ -18,7 +18,7 @@ async function fetchLatestModels () {
   // - anthropic.claude-{sonnet|haiku|opus}-4-6-v1:0
   // - anthropic.claude-{sonnet|haiku|opus}-4-20250514-v1:0
   // - anthropic.claude-{sonnet|haiku|opus}-4-5-20250929-v1:0
-  
+
   const modelTypes = ['sonnet', 'haiku', 'opus']
   const models = {}
 
@@ -26,7 +26,7 @@ async function fetchLatestModels () {
     // Match both formats: with date (claude-opus-4-5-20250929) and without date (claude-opus-4-6)
     const anthropicPattern = new RegExp(`claude-${modelType}-\\d+(?:-\\d+)?(?:-\\d{8})?`, 'g')
     const bedrockPattern = new RegExp(`anthropic\\.claude-${modelType}-\\d+(?:-\\d+)?(?:-\\d{8})?-v1:0`, 'g')
-    
+
     const anthropicMatch = html.match(anthropicPattern)
     const bedrockMatch = html.match(bedrockPattern)
 
@@ -130,7 +130,7 @@ async function main () {
 
     // First, check if we need to add models to COUNT_TOKENS_HASHFUN
     const bedrockContent = await readFile(join(rootDir, 'src/bedrockExplainPatch.js'), 'utf-8')
-    
+
     const bedrockUpdates = [
       {
         search: /models = \['(?:global\.)?anthropic\.claude-(?:3-7-sonnet-\d{8}|(?:sonnet|haiku|opus)-\d+(?:-\d+)?(?:-\d{8})?)-v1:0'\]/,
