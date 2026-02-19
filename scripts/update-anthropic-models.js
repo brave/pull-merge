@@ -22,20 +22,40 @@ async function fetchLatestModels () {
   const modelTypes = ['sonnet', 'haiku', 'opus']
   const models = {}
 
+  // Compare two model identifier strings by their numeric version segments.
+  // Each numeric segment is compared as an integer so that 6 > 5 and 10 > 6.
+  // Date segments (8-digit numbers) are treated as a lower-priority suffix.
+  // Returns positive if a > b, negative if a < b, 0 if equal.
+  function compareModelVersions (a, b) {
+    const segmentsOf = str => str.split('-').map(s => (s.match(/^\d+$/) ? parseInt(s, 10) : s))
+    const sa = segmentsOf(a)
+    const sb = segmentsOf(b)
+    const len = Math.max(sa.length, sb.length)
+    for (let i = 0; i < len; i++) {
+      const va = sa[i] ?? -Infinity
+      const vb = sb[i] ?? -Infinity
+      if (va < vb) return -1
+      if (va > vb) return 1
+    }
+    return 0
+  }
+
   for (const modelType of modelTypes) {
     // Match both formats: with date (claude-opus-4-5-20250929) and without date (claude-opus-4-6)
     const anthropicPattern = new RegExp(`claude-${modelType}-\\d+(?:-\\d+)?(?:-\\d{8})?`, 'g')
     const bedrockPattern = new RegExp(`anthropic\\.claude-${modelType}-\\d+(?:-\\d+)?(?:-\\d{8})?-v1:0`, 'g')
     
-    const anthropicMatch = html.match(anthropicPattern)
-    const bedrockMatch = html.match(bedrockPattern)
+    const anthropicMatches = html.match(anthropicPattern)
+    const bedrockMatches = html.match(bedrockPattern)
 
-    if (anthropicMatch && bedrockMatch) {
-      // Get the most recent model (first occurrence, as docs list newest first)
+    if (anthropicMatches && bedrockMatches) {
+      // Pick the lexicographically greatest version by numeric segment comparison
+      const latestAnthropic = [...new Set(anthropicMatches)].sort(compareModelVersions).at(-1)
+      const latestBedrock = [...new Set(bedrockMatches)].sort(compareModelVersions).at(-1)
       models[modelType] = {
-        anthropic: anthropicMatch[0],
+        anthropic: latestAnthropic,
         // Bedrock models should use global inference profiles: global.anthropic.claude-...
-        bedrock: `global.${bedrockMatch[0]}`
+        bedrock: `global.${latestBedrock}`
       }
     } else {
       console.warn(`Warning: Could not find ${modelType} model identifiers in the documentation`)
