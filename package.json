@@ -16,7 +16,7 @@
         "@octokit/core": "^5.0.2",
         "lodash": "^4.17.23",
         "markdown-to-txt": "^2.0.1",
-        "openai": "^4.20.1",
+        "openai": "^6.0.0",
         "tiktoken": "^1.0.11"
     },
     "devDependencies": {
