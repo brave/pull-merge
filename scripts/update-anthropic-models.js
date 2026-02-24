@@ -24,18 +24,49 @@ async function fetchLatestModels () {
 
   // Compare two model identifier strings by their numeric version segments.
   // Each numeric segment is compared as an integer so that 6 > 5 and 10 > 6.
-  // Date segments (8-digit numbers) are treated as a lower-priority suffix.
+  // Date segments (8-digit numbers like 20250514) are treated as lower-priority suffixes.
   // Returns positive if a > b, negative if a < b, 0 if equal.
   function compareModelVersions (a, b) {
-    const segmentsOf = str => str.split('-').map(s => (s.match(/^\d+$/) ? parseInt(s, 10) : s))
+    const segmentsOf = str => {
+      const parts = str.split('-')
+      return parts.map((s, i) => {
+        if (!s.match(/^\d+$/)) return s
+        const num = parseInt(s, 10)
+        // Treat 8-digit numbers as dates (lower priority than version numbers)
+        const isDate = s.length === 8
+        return { num, isDate }
+      })
+    }
+    
     const sa = segmentsOf(a)
     const sb = segmentsOf(b)
     const len = Math.max(sa.length, sb.length)
+    
     for (let i = 0; i < len; i++) {
-      const va = sa[i] ?? -Infinity
-      const vb = sb[i] ?? -Infinity
-      if (va < vb) return -1
-      if (va > vb) return 1
+      const va = sa[i]
+      const vb = sb[i]
+      
+      // Missing segment is lowest priority
+      if (!va) return -1
+      if (!vb) return 1
+      
+      // String segments: lexicographic comparison
+      if (typeof va === 'string' && typeof vb === 'string') {
+        if (va < vb) return -1
+        if (va > vb) return 1
+        continue
+      }
+      
+      // Mixed string/number: shouldn't happen, but treat strings as lower
+      if (typeof va === 'string') return -1
+      if (typeof vb === 'string') return 1
+      
+      // Both are numbers: version number beats date, then compare numerically
+      if (!va.isDate && vb.isDate) return 1  // version > date
+      if (va.isDate && !vb.isDate) return -1 // date < version
+      
+      if (va.num < vb.num) return -1
+      if (va.num > vb.num) return 1
     }
     return 0
   }
