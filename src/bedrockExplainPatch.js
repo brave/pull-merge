@@ -58,7 +58,7 @@ const countTokens = (text, modelId) => {
 /* eslint-disable camelcase */
 export default async function explainPatch ({
   patchBody, owner, repo,
-  models = ['global.anthropic.claude-opus-4-6-v1:0'],
+  models = ['global.anthropic.claude-opus-4-5-20251101-v1:0'],
   system = SYSTEM_PROMPT,
   max_tokens = 3072,
   temperature = 1,
