@@ -32,7 +32,8 @@ export async function explainPatchHelper (patchBody, owner, repo, models, debug,
   let model = null
   let response = null
 
-  const userPrompt = `Repository: https://github.com/${owner}/${repo}\n\nThis is the PR diff\n\`\`\`\n${patchBody}\n\`\`\``
+  const date = new Date().toISOString().split('T')[0]
+  const userPrompt = `Repository: https://github.com/${owner}/${repo}\nDate: ${date}\n\nThis is the PR diff\n\`\`\`\n${patchBody}\n\`\`\``
 
   if (debug) {
     console.log(`user_prompt:\n\n${userPrompt}`)
