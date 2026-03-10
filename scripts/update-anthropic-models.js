@@ -18,7 +18,7 @@ async function fetchLatestModels () {
   // - anthropic.claude-{sonnet|haiku|opus}-4-6-v1:0
   // - anthropic.claude-{sonnet|haiku|opus}-4-20250514-v1:0
   // - anthropic.claude-{sonnet|haiku|opus}-4-5-20250929-v1:0
-  
+
   const modelTypes = ['sonnet', 'haiku', 'opus']
   const models = {}
 
@@ -37,34 +37,34 @@ async function fetchLatestModels () {
         return { num, isDate }
       })
     }
-    
+
     const sa = segmentsOf(a)
     const sb = segmentsOf(b)
     const len = Math.max(sa.length, sb.length)
-    
+
     for (let i = 0; i < len; i++) {
       const va = sa[i]
       const vb = sb[i]
-      
+
       // Missing segment is lowest priority
       if (!va) return -1
       if (!vb) return 1
-      
+
       // String segments: lexicographic comparison
       if (typeof va === 'string' && typeof vb === 'string') {
         if (va < vb) return -1
         if (va > vb) return 1
         continue
       }
-      
+
       // Mixed string/number: shouldn't happen, but treat strings as lower
       if (typeof va === 'string') return -1
       if (typeof vb === 'string') return 1
-      
+
       // Both are numbers: version number beats date, then compare numerically
-      if (!va.isDate && vb.isDate) return 1  // version > date
+      if (!va.isDate && vb.isDate) return 1 // version > date
       if (va.isDate && !vb.isDate) return -1 // date < version
-      
+
       if (va.num < vb.num) return -1
       if (va.num > vb.num) return 1
     }
@@ -75,7 +75,7 @@ async function fetchLatestModels () {
     // Match both formats: with date (claude-opus-4-5-20250929) and without date (claude-opus-4-6)
     const anthropicPattern = new RegExp(`claude-${modelType}-\\d+(?:-\\d+)?(?:-\\d{8})?`, 'g')
     const bedrockPattern = new RegExp(`anthropic\\.claude-${modelType}-\\d+(?:-\\d+)?(?:-\\d{8})?-v1:0`, 'g')
-    
+
     const anthropicMatches = html.match(anthropicPattern)
     const bedrockMatches = html.match(bedrockPattern)
 
@@ -181,7 +181,7 @@ async function main () {
 
     // First, check if we need to add models to COUNT_TOKENS_HASHFUN
     const bedrockContent = await readFile(join(rootDir, 'src/bedrockExplainPatch.js'), 'utf-8')
-    
+
     const bedrockUpdates = [
       {
         search: /models = \['(?:global\.)?anthropic\.claude-(?:3-7-sonnet-\d{8}|(?:sonnet|haiku|opus)-\d+(?:-\d+)?(?:-\d{8})?)-v1:0'\]/,
@@ -190,7 +190,7 @@ async function main () {
     ]
 
     // Add COUNT_TOKENS_HASHFUN entries for any models not already present
-    for (const [modelType, modelIds] of Object.entries(models)) {
+    for (const [, modelIds] of Object.entries(models)) {
       if (!bedrockContent.includes(`'${modelIds.bedrock}': anthropicCountTokens`)) {
         // Find the last anthropic model entry and add after it
         bedrockUpdates.push({
