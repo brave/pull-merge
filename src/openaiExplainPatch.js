@@ -1,6 +1,6 @@
 import OpenAI from 'openai'
 /* eslint-disable camelcase */
-import { encoding_for_model } from 'tiktoken'
+import { encoding_for_model, get_encoding } from 'tiktoken'
 import { SYSTEM_PROMPT, explainPatchHelper } from './utils.js'
 
 export default async function explainPatch ({
@@ -21,7 +21,12 @@ export default async function explainPatch ({
   return await explainPatchHelper(
     patchBody, owner, repo, models, debug,
     async (userPrompt, model) => {
-      const enc = encoding_for_model(model)
+      let enc
+      try {
+        enc = encoding_for_model(model)
+      } catch {
+        enc = get_encoding('cl100k_base')
+      }
       const pLen = enc.encode(patchBody).length
 
       if (pLen === 0) { throw new Error('The patch is empty, cannot summarize!') }
