@@ -37,29 +37,53 @@ export default async function explainPatch ({
         throw new Error('The patch is trivial, no need for a summarization')
       }
 
-      const aiResponse = await openai.chat.completions.create({
-        model,
-        messages: [
-          {
-            role: 'system',
-            content: system
-          },
-          {
-            role: 'user',
-            content: userPrompt
+      let aiResponse
+      try {
+        aiResponse = await openai.chat.completions.create({
+          model,
+          messages: [
+            {
+              role: 'system',
+              content: system
+            },
+            {
+              role: 'user',
+              content: userPrompt
+            }
+          ],
+          temperature,
+          max_tokens,
+          top_p,
+          frequency_penalty,
+          presence_penalty
+        })
+        if (debug) {
+          console.log(aiResponse)
+          console.log(aiResponse.choices[0].message)
+        }
+        return aiResponse.choices[0].message.content
+      } catch (err) {
+        // Some models (e.g. base/codex models) are not chat models and must use
+        // the legacy v1/completions endpoint instead.
+        if (err.status === 404 && err.error?.type === 'invalid_request_error') {
+          const prompt = `${system}\n\n${userPrompt}`
+          aiResponse = await openai.completions.create({
+            model,
+            prompt,
+            temperature,
+            max_tokens,
+            top_p,
+            frequency_penalty,
+            presence_penalty
+          })
+          if (debug) {
+            console.log(aiResponse)
+            console.log(aiResponse.choices[0].text)
           }
-        ],
-        temperature,
-        max_tokens,
-        top_p,
-        frequency_penalty,
-        presence_penalty
-      })
-      if (debug) {
-        console.log(aiResponse)
-        console.log(aiResponse.choices[0].message)
+          return aiResponse.choices[0].text
+        }
+        throw err
       }
-      return aiResponse.choices[0].message.content
     }
   )
 }
