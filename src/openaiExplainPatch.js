@@ -5,7 +5,7 @@ import { SYSTEM_PROMPT, explainPatchHelper } from './utils.js'
 
 export default async function explainPatch ({
   apiKey, patchBody, owner, repo,
-  models = ['gpt-5.3-codex', 'gpt-4o'],
+  models = ['gpt-5.3-codex'],
   system = SYSTEM_PROMPT,
   max_tokens = 3072,
   temperature = 1,
