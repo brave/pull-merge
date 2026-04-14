@@ -16,6 +16,7 @@ async function fetchLatestModels () {
   // - claude-{sonnet|haiku|opus}-4-20250514 (single version with date)
   // - claude-{sonnet|haiku|opus}-4-5-20250929 (with minor version and date)
   // - anthropic.claude-{sonnet|haiku|opus}-4-6-v1:0
+  // - anthropic.claude-{sonnet|haiku|opus}-4-6 (no version suffix)
   // - anthropic.claude-{sonnet|haiku|opus}-4-20250514-v1:0
   // - anthropic.claude-{sonnet|haiku|opus}-4-5-20250929-v1:0
 
@@ -74,7 +75,7 @@ async function fetchLatestModels () {
   for (const modelType of modelTypes) {
     // Match both formats: with date (claude-opus-4-5-20250929) and without date (claude-opus-4-6)
     const anthropicPattern = new RegExp(`claude-${modelType}-\\d+(?:-\\d+)?(?:-\\d{8})?`, 'g')
-    const bedrockPattern = new RegExp(`anthropic\\.claude-${modelType}-\\d+(?:-\\d+)?(?:-\\d{8})?-v1:0`, 'g')
+    const bedrockPattern = new RegExp(`anthropic\\.claude-${modelType}-\\d+(?:-\\d+)?(?:-\\d{8})?(?:-v1(?::0)?)?`, 'g')
 
     const anthropicMatches = html.match(anthropicPattern)
     const bedrockMatches = html.match(bedrockPattern)
@@ -83,10 +84,17 @@ async function fetchLatestModels () {
       // Pick the lexicographically greatest version by numeric segment comparison
       const latestAnthropic = [...new Set(anthropicMatches)].sort(compareModelVersions).at(-1)
       const latestBedrock = [...new Set(bedrockMatches)].sort(compareModelVersions).at(-1)
+      // Normalize to always use -v1:0 suffix (some page entries may omit :0 or -v1:0 entirely)
+      let normalizedBedrock = latestBedrock
+      if (normalizedBedrock.endsWith('-v1')) {
+        normalizedBedrock = `${normalizedBedrock}:0`
+      } else if (!/-v\d+:\d+$/.test(normalizedBedrock)) {
+        normalizedBedrock = `${normalizedBedrock}-v1:0`
+      }
       models[modelType] = {
         anthropic: latestAnthropic,
         // Bedrock models should use global inference profiles: global.anthropic.claude-...
-        bedrock: `global.${latestBedrock}`
+        bedrock: `global.${normalizedBedrock}`
       }
     } else {
       console.warn(`Warning: Could not find ${modelType} model identifiers in the documentation`)
@@ -146,7 +154,7 @@ async function main () {
           replace: `anthropic_models: '${defaultModel.anthropic}'`
         },
         {
-          search: /bedrock_models: 'global\.anthropic\.claude-(?:sonnet|haiku|opus)-\d+(?:-\d+)?(?:-\d{8})?-v1:0'/,
+          search: /bedrock_models: 'global\.anthropic\.claude-(?:sonnet|haiku|opus)-\d+(?:-\d+)?(?:-\d{8})?-v1(?::0)?'/,
           replace: `bedrock_models: '${defaultModel.bedrock}'`
         }
       ]
@@ -184,7 +192,7 @@ async function main () {
 
     const bedrockUpdates = [
       {
-        search: /models = \['(?:global\.)?anthropic\.claude-(?:3-7-sonnet-\d{8}|(?:sonnet|haiku|opus)-\d+(?:-\d+)?(?:-\d{8})?)-v1:0'\]/,
+        search: /models = \['(?:global\.)?anthropic\.claude-(?:3-7-sonnet-\d{8}|(?:sonnet|haiku|opus)-\d+(?:-\d+)?(?:-\d{8})?)-v1(?::0)?'\]/,
         replace: `models = ['${defaultModel.bedrock}']`
       }
     ]
@@ -194,7 +202,7 @@ async function main () {
       if (!bedrockContent.includes(`'${modelIds.bedrock}': anthropicCountTokens`)) {
         // Find the last anthropic model entry and add after it
         bedrockUpdates.push({
-          search: /('(?:global\.)?anthropic\.claude-(?:sonnet|haiku|opus)-\d+(?:-\d+)?(?:-\d{8})?-v1:0': anthropicCountTokens,)\n/,
+          search: /('(?:global\.)?anthropic\.claude-(?:sonnet|haiku|opus)-\d+(?:-\d+)?(?:-\d{8})?-v1(?::0)?': anthropicCountTokens,)\n/,
           replace: `$1\n  '${modelIds.bedrock}': anthropicCountTokens,\n`
         })
       }
