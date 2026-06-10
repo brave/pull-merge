@@ -30,7 +30,7 @@ async function fetchLatestModels () {
   function compareModelVersions (a, b) {
     const segmentsOf = str => {
       const parts = str.split('-')
-      return parts.map((s, i) => {
+      return parts.map(s => {
         if (!s.match(/^\d+$/)) return s
         const num = parseInt(s, 10)
         // Treat 8-digit numbers as dates (lower priority than version numbers)
@@ -80,10 +80,48 @@ async function fetchLatestModels () {
     const anthropicMatches = html.match(anthropicPattern)
     const bedrockMatches = html.match(bedrockPattern)
 
-    if (anthropicMatches && bedrockMatches) {
+    // Reject model names with mushed version numbers (e.g. claude-opus-47 where 47
+    // is missing the hyphen between 4 and 7). These appear as typos in the docs.
+    // A valid model version segment is ≤ 99 (two-digit) but NOT a two-digit number
+    // that can be split into two valid 1-2 digit version parts (e.g. 47 → 4-7).
+    // Heuristic: if both `4-7` and `47` exist in raw HTML, `47` is a typo.
+    // More generally: reject any numeric segment that is ≥ 10 and not a date (8 digits),
+    // when a split version (preceding number + `-` + subsequent number) also exists.
+    function isSquashedVersion (match, allMatches) {
+      const parts = match.split('-')
+      for (const part of parts) {
+        if (/^\d+$/.test(part) && part.length !== 8) {
+          const n = parseInt(part, 10)
+          // Two-digit numbers (10-99) that are not dates are suspicious as mushed versions
+          if (n >= 10 && n <= 99) {
+            // Check if a split version exists: e.g. for '47', check if '4-7' pattern exists
+            // n as two separate digits: check each possible split point
+            const s = part
+            for (let splitPos = 1; splitPos < s.length; splitPos++) {
+              const a = s.substring(0, splitPos)
+              const b = s.substring(splitPos)
+              const splitVersion = match.replace(part, `${a}-${b}`)
+              if (allMatches.includes(splitVersion)) {
+                return true
+              }
+            }
+          }
+        }
+      }
+      return false
+    }
+
+    const filteredAnthropic = anthropicMatches
+      ? [...new Set(anthropicMatches)].filter(m => !isSquashedVersion(m, anthropicMatches))
+      : null
+    const filteredBedrock = bedrockMatches
+      ? [...new Set(bedrockMatches)].filter(m => !isSquashedVersion(m, bedrockMatches))
+      : null
+
+    if (filteredAnthropic && filteredBedrock) {
       // Pick the lexicographically greatest version by numeric segment comparison
-      const latestAnthropic = [...new Set(anthropicMatches)].sort(compareModelVersions).at(-1)
-      const latestBedrock = [...new Set(bedrockMatches)].sort(compareModelVersions).at(-1)
+      const latestAnthropic = [...filteredAnthropic].sort(compareModelVersions).at(-1)
+      const latestBedrock = [...filteredBedrock].sort(compareModelVersions).at(-1)
       // Normalize to always use -v1:0 suffix (some page entries may omit :0 or -v1:0 entirely)
       let normalizedBedrock = latestBedrock
       if (normalizedBedrock.endsWith('-v1')) {
