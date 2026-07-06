@@ -141,7 +141,7 @@ export default async function explainPatch ({
         throw new Error('Bedrock stream failed', { cause: e })
       }
       let fullText = ''
-      for (const line of raw.split('\n').filter(Boolean)) {
+      for (const line of raw.split(/(?<=\})(?=\{)/)) {
         try {
           const event = JSON.parse(line)
           if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
