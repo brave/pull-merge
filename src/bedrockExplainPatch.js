@@ -1,7 +1,7 @@
 import { countTokens as anthropicCountTokens } from '@anthropic-ai/tokenizer'
 import {
   BedrockRuntimeClient,
-  InvokeModelCommand
+  InvokeModelWithResponseStreamCommand
 } from '@aws-sdk/client-bedrock-runtime'
 import {
   SSMClient,
@@ -126,18 +126,28 @@ export default async function explainPatch ({
         commandParams.modelId = inferenceProfileArn
       }
 
-      const command = new InvokeModelCommand(commandParams)
+      const command = new InvokeModelWithResponseStreamCommand(commandParams)
 
-      const rawResonse = await client.send(command)
-      const textResponse = new TextDecoder().decode(rawResonse.body)
-      if (debug) {
-        console.log(`response:\n\n${textResponse}`)
+      const streamResponse = await client.send(command)
+      let fullText = ''
+      for await (const chunk of streamResponse.body) {
+        const decoded = new TextDecoder().decode(chunk.chunk?.bytes)
+        if (debug) {
+          console.log(`chunk: ${decoded}`)
+        }
+        try {
+          const event = JSON.parse(decoded)
+          if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+            fullText += event.delta.text
+          }
+        } catch (e) {
+          // skip non-JSON chunks
+        }
       }
-      const response = JSON.parse(textResponse)
       if (debug) {
-        console.log(response)
+        console.log(`full text:\n\n${fullText}`)
       }
-      return response.content[0].text
+      return fullText
     }
   )
 }
