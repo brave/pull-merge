@@ -128,21 +128,35 @@ export default async function explainPatch ({
 
       const command = new InvokeModelWithResponseStreamCommand(commandParams)
 
-      const streamResponse = await client.send(command)
-      let fullText = ''
-      for await (const chunk of streamResponse.body) {
-        const decoded = new TextDecoder().decode(chunk.chunk?.bytes)
-        if (debug) {
-          console.log(`chunk: ${decoded}`)
+      const decoder = new TextDecoder()
+      let raw = ''
+      try {
+        const streamResponse = await client.send(command)
+        for await (const chunk of streamResponse.body) {
+          if (!chunk.chunk?.bytes) continue
+          raw += decoder.decode(chunk.chunk.bytes, { stream: true })
         }
+        raw += decoder.decode() // flush remaining multi-byte chars
+      } catch (e) {
+        throw new Error('Bedrock stream failed', { cause: e })
+      }
+      let fullText = ''
+      for (const line of raw.split('\n').filter(Boolean)) {
         try {
-          const event = JSON.parse(decoded)
+          const event = JSON.parse(line)
           if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
             fullText += event.delta.text
+          } else if (debug && event.type === 'message_stop') {
+            console.log(`stop reason: ${JSON.stringify(event)}`)
           }
         } catch (e) {
-          // skip non-JSON chunks
+          if (debug) {
+            console.log(`skipping non-JSON line: ${e.message}`)
+          }
         }
+      }
+      if (!fullText) {
+        throw new Error('Bedrock stream produced no text')
       }
       if (debug) {
         console.log(`full text:\n\n${fullText}`)
