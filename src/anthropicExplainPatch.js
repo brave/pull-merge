@@ -27,7 +27,7 @@ export default async function explainPatch ({
   return await explainPatchHelper(
     patchBody, owner, repo, models, debug,
     async (userPrompt, model) => {
-      const aiResponse = await anthropic.messages.create({
+      const stream = anthropic.messages.stream({
         max_tokens,
         temperature,
         model,
@@ -39,11 +39,11 @@ export default async function explainPatch ({
           }
         ]
       })
-      const response = aiResponse.content
+      const text = await stream.finalText()
       if (debug) {
-        console.log(response)
+        console.log(text)
       }
-      return response[0].text
+      return text
     }
   )
 }
