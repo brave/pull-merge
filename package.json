@@ -13,7 +13,7 @@
         "@anthropic-ai/tokenizer": "^0.0.4",
         "@aws-sdk/client-bedrock-runtime": "^3.621.0",
         "@aws-sdk/client-ssm": "^3.782.0",
-        "@octokit/core": "^5.0.2",
+        "@octokit/core": "^7.0.0",
         "lodash": "^4.17.23",
         "markdown-to-txt": "^2.0.1",
         "openai": "^4.20.1",
