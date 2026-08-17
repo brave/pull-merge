@@ -56,7 +56,8 @@ export default async function submitReview ({
 
   // debounce if there are messages with watermark and the debounce time is not expired yet
   if (messages.some(msg => msg.body.includes(watermark) && !isOlderThanXHours(msg.updatedAt, debounceTime))) {
-    throw new Error('debounce')
+    if (debug) console.log('debounced')
+    return true
   }
 
   // delete existing messages with the watermark

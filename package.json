@@ -1,5 +1,6 @@
 {
     "type": "module",
+    "packageManager": "pnpm@11.22.0",
     "bugs": {
         "url": "https://github.com/brave/pull-merge/issues",
         "email": "security@brave.com"
