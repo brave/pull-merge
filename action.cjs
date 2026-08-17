@@ -120,7 +120,7 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
       ? '<details><summary>Diff</summary>\n\n````````````diff\n\n' + filteredPatch + '\n\n````````````\n\n</details>'
       : ''
 
-    await submitReview({
+    const debounced = await submitReview({
       owner: options.owner,
       repo: options.repo,
       prnum: options.prnum,
@@ -131,6 +131,8 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
       debug,
       github
     })
+
+    if (debounced) return
 
     await github.rest.issues.addLabels({
       owner: options.owner,
