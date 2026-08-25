@@ -63,8 +63,30 @@ export default async function explainPatch ({
         }
         return aiResponse.choices[0].message.content
       } catch (err) {
-        // Some models (e.g. base/codex models) are not chat models and must use
-        // the legacy v1/completions endpoint instead.
+        // Codex / reasoning models only support the v1/responses endpoint.
+        // The SDK returns this hint in the 404 error message.
+        const wantsResponses = err.status === 404 &&
+          err.error?.type === 'invalid_request_error' &&
+          /v1\/responses/i.test(err.error?.message || err.message || '')
+
+        if (wantsResponses) {
+          aiResponse = await openai.responses.create({
+            model,
+            instructions: system,
+            input: userPrompt,
+            temperature,
+            top_p,
+            max_output_tokens: max_tokens
+          })
+          if (debug) {
+            console.log(aiResponse)
+            console.log(aiResponse.output_text)
+          }
+          return aiResponse.output_text
+        }
+
+        // Some base models are not chat models and must use the legacy
+        // v1/completions endpoint instead.
         if (err.status === 404 && err.error?.type === 'invalid_request_error') {
           const prompt = `${system}\n\n${userPrompt}`
           aiResponse = await openai.completions.create({
