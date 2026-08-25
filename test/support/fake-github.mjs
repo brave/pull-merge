@@ -18,7 +18,7 @@ export function makeGithub () {
       const st = mockState().github
       st.requestCalls.push({ route, opts })
       for (const r of st.requestRoutes) {
-        if (r.match(route)) {
+        if (r.match(route, opts)) {
           if (r.error) throw r.error
           return typeof r.reply === 'function' ? r.reply(opts) : r.reply
         }

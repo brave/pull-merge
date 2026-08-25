@@ -1,0 +1,7 @@
+#!/usr/bin/env node
+import { appendFileSync } from 'node:fs'
+
+if (process.env.PM_RECORD) {
+  appendFileSync(process.env.PM_RECORD, JSON.stringify({ bin: 'git', argv: process.argv.slice(2) }) + '\n')
+}
+process.stdout.write(process.env.PM_DIFF_CONTENT ?? '')
