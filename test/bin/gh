@@ -1,0 +1,10 @@
+#!/usr/bin/env node
+import { appendFileSync, mkdirSync } from 'node:fs'
+
+if (process.env.PM_RECORD) {
+  appendFileSync(process.env.PM_RECORD, JSON.stringify({ bin: 'gh', argv: process.argv.slice(2) }) + '\n')
+}
+const clonePath = process.argv[5]
+if (process.argv[2] === 'repo' && process.argv[3] === 'clone' && clonePath) {
+  mkdirSync(clonePath, { recursive: true })
+}
