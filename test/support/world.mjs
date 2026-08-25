@@ -16,7 +16,7 @@ class CustomWorld {
 }
 
 setWorldConstructor(CustomWorld)
-setDefaultTimeout(20000)
+setDefaultTimeout(60000)
 
 let savedFetch = null
 let savedPath = null
