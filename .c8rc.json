@@ -1,0 +1,23 @@
+{
+  "all": true,
+  "include": [
+    "src/anthropicExplainPatch.js",
+    "src/bedrockExplainPatch.js",
+    "src/filterdiff.js",
+    "src/getConfig.js",
+    "src/getDependabotPatch.js",
+    "src/getPatch.js",
+    "src/getProperties.js",
+    "src/getRenovatePatch.js",
+    "src/openaiExplainPatch.js",
+    "src/submitReview.js",
+    "src/subtleSubmitReview.js",
+    "src/utils.js",
+    "scripts/update-anthropic-models.js",
+    "scripts/update-openai-models.js",
+    "action.cjs",
+    "run.js"
+  ],
+  "exclude": ["node_modules/**", "coverage/**", "tmp/**", "test/**"],
+  "reporter": ["text", "text-summary"]
+}
