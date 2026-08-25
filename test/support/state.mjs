@@ -36,6 +36,7 @@ export function freshState () {
       invocations: [],
       chunks: [],
       sendError: null,
+      sendErrors: [],
       invalidChunk: false
     },
     octokit: {

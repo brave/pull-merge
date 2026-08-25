@@ -8,6 +8,8 @@ export class BedrockRuntimeClient {
   async send (command) {
     const st = mockState().bedrock
     st.invocations.push(command.input)
+    const queued = st.sendErrors.shift()
+    if (queued) throw queued
     if (st.sendError) throw st.sendError
     const encoder = new TextEncoder()
     const chunks = st.chunks.map(c => ({ chunk: { bytes: encoder.encode(c) } }))
