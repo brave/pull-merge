@@ -1,1 +1,4 @@
 node_modules
+coverage
+tmp
+cucumber-report.html
