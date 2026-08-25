@@ -9,6 +9,10 @@ export default class Anthropic {
         st.streamCalls.push(params)
         return {
           finalText: async () => {
+            if (st.streamErrors.length > 0) {
+              const err = st.streamErrors.shift()
+              if (err) throw err
+            }
             if (st.streamError) throw st.streamError
             return st.streamText
           }
