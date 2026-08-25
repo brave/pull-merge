@@ -15,7 +15,8 @@ export function freshState () {
       constructorArgs: [],
       streamCalls: [],
       streamText: '',
-      streamError: null
+      streamError: null,
+      streamErrors: []
     },
     tokenizer: {
       count: () => 0

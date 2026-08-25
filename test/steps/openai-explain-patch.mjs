@@ -26,6 +26,7 @@ async function callOpenAI (world) {
 
 Given('the patch tokenizes to {int} tokens', function (count) {
   mockState().tiktoken.count = () => count
+  mockState().tokenizer.count = () => count
 })
 
 Given('max tokens {int}', function (maxTokens) {
