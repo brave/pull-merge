@@ -1,6 +1,14 @@
 #!/usr/bin/env node
+import { writeFileSync } from 'node:fs'
+
 let data = ''
 process.stdin.on('data', (chunk) => { data += chunk })
 process.stdin.on('end', () => {
-  process.stdout.write(data)
+  if (process.env.PM_RECORD) {
+    writeFileSync(process.env.PM_RECORD, JSON.stringify({ argv: process.argv.slice(2), stdin: data }))
+  }
+  if (process.env.PM_STDERR) {
+    process.stderr.write(process.env.PM_STDERR)
+  }
+  process.stdout.write(process.env.PM_OUTPUT !== undefined ? process.env.PM_OUTPUT : data)
 })
