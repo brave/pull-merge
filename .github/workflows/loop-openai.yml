@@ -1,6 +1,10 @@
 name: loop openai
+# Disabled: OpenAI org has no credits (insufficient_quota) — every run fails
+# regardless of code. Re-enable once billing is restored.
 on:
   pull_request:
+    branches-ignore:
+      - '**'
 permissions:
   contents: read
   id-token: write
