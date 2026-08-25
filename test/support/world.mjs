@@ -31,7 +31,7 @@ Before(function () {
   savedPath = process.env.PATH
   process.env.PATH = `${testBinDir}:${process.env.PATH}`
   savedLog = console.log
-  console.log = (...args) => { this.state.logs.push(args.map(String).join(' ')) }
+  console.log = (...args) => { this.state.logs.push(args.map((arg) => arg instanceof Error ? arg.message : typeof arg === 'string' ? arg : JSON.stringify(arg)).join(' ')) }
   savedCwd = process.cwd()
   envSnapshot = { ...process.env }
 })
