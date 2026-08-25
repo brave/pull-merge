@@ -21,8 +21,13 @@ setDefaultTimeout(60000)
 let savedFetch = null
 let savedPath = null
 let savedLog = null
+let savedWarn = null
+let savedError = null
+let savedExit = null
 let savedCwd = null
 let envSnapshot = null
+
+const logify = (args) => args.map((arg) => arg instanceof Error ? arg.message : typeof arg === 'string' ? arg : JSON.stringify(arg)).join(' ')
 
 Before(function () {
   this.state = resetState()
@@ -31,7 +36,13 @@ Before(function () {
   savedPath = process.env.PATH
   process.env.PATH = `${testBinDir}:${process.env.PATH}`
   savedLog = console.log
-  console.log = (...args) => { this.state.logs.push(args.map((arg) => arg instanceof Error ? arg.message : typeof arg === 'string' ? arg : JSON.stringify(arg)).join(' ')) }
+  console.log = (...args) => { this.state.logs.push(logify(args)) }
+  savedWarn = console.warn
+  console.warn = (...args) => { this.state.logs.push(logify(args)) }
+  savedError = console.error
+  console.error = (...args) => { this.state.logs.push(logify(args)) }
+  savedExit = process.exit
+  process.exit = (code) => { this.state.scripts.exitCalls.push(code) }
   savedCwd = process.cwd()
   envSnapshot = { ...process.env }
 })
@@ -40,6 +51,9 @@ After(function () {
   globalThis.fetch = savedFetch
   process.env.PATH = savedPath
   console.log = savedLog
+  console.warn = savedWarn
+  console.error = savedError
+  process.exit = savedExit
   if (process.cwd() !== savedCwd) {
     process.chdir(savedCwd)
   }

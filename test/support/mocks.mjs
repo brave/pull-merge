@@ -11,6 +11,7 @@ import {
 } from './mock-bedrock.mjs'
 import { Octokit } from './mock-octokit.mjs'
 import { markdownToTxt } from './mock-markdown.mjs'
+import { fsStubs } from './mock-fs.mjs'
 
 await quibble.esm('openai', {}, OpenAI)
 await quibble.esm('@anthropic-ai/sdk', {}, Anthropic)
@@ -20,3 +21,4 @@ await quibble.esm('@aws-sdk/client-bedrock-runtime', { BedrockRuntimeClient, Inv
 await quibble.esm('@aws-sdk/client-ssm', { SSMClient, GetParameterCommand })
 await quibble.esm('@octokit/core', { Octokit })
 await quibble.esm('markdown-to-txt', { markdownToTxt })
+await quibble.esm('fs/promises', fsStubs)

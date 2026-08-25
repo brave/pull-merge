@@ -1,12 +1,12 @@
 import { readFile, writeFile } from 'fs/promises'
-import { fileURLToPath } from 'url'
+import { fileURLToPath, pathToFileURL } from 'url'
 import { dirname, join } from 'path'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const rootDir = join(__dirname, '..')
 
-async function fetchLatestModels () {
+export async function fetchLatestModels () {
   const response = await fetch('https://platform.openai.com/docs/models')
   const html = await response.text()
 
@@ -50,7 +50,7 @@ async function fetchLatestModels () {
   return models
 }
 
-async function updateFile (filePath, updates) {
+export async function updateFile (filePath, updates) {
   const content = await readFile(filePath, 'utf-8')
   let updatedContent = content
 
@@ -66,7 +66,7 @@ async function updateFile (filePath, updates) {
   return false
 }
 
-async function main () {
+export async function main () {
   try {
     console.log('Fetching latest OpenAI model identifiers...')
     const models = await fetchLatestModels()
@@ -141,4 +141,6 @@ async function main () {
   }
 }
 
-main()
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await main()
+}

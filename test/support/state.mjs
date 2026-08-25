@@ -55,6 +55,13 @@ export function freshState () {
     },
     fetchRoutes: [],
     fetchCalls: [],
+    fs: {
+      files: {},
+      writes: []
+    },
+    scripts: {
+      exitCalls: []
+    },
     logs: []
   }
 }

@@ -1,12 +1,92 @@
 import { readFile, writeFile } from 'fs/promises'
-import { fileURLToPath } from 'url'
+import { fileURLToPath, pathToFileURL } from 'url'
 import { dirname, join } from 'path'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const rootDir = join(__dirname, '..')
 
-async function fetchLatestModels () {
+// Compare two model identifier strings by their numeric version segments.
+// Each numeric segment is compared as an integer so that 6 > 5 and 10 > 6.
+// Date segments (8-digit numbers like 20250514) are treated as lower-priority suffixes.
+// Returns positive if a > b, negative if a < b, 0 if equal.
+export function compareModelVersions (a, b) {
+  const segmentsOf = str => {
+    const parts = str.split('-')
+    return parts.map(s => {
+      if (!s.match(/^\d+$/)) return s
+      const num = parseInt(s, 10)
+      // Treat 8-digit numbers as dates (lower priority than version numbers)
+      const isDate = s.length === 8
+      return { num, isDate }
+    })
+  }
+
+  const sa = segmentsOf(a)
+  const sb = segmentsOf(b)
+  const len = Math.max(sa.length, sb.length)
+
+  for (let i = 0; i < len; i++) {
+    const va = sa[i]
+    const vb = sb[i]
+
+    // Missing segment is lowest priority
+    if (!va) return -1
+    if (!vb) return 1
+
+    // String segments: lexicographic comparison
+    if (typeof va === 'string' && typeof vb === 'string') {
+      if (va < vb) return -1
+      if (va > vb) return 1
+      continue
+    }
+
+    // Mixed string/number: shouldn't happen, but treat strings as lower
+    if (typeof va === 'string') return -1
+    if (typeof vb === 'string') return 1
+
+    // Both are numbers: version number beats date, then compare numerically
+    if (!va.isDate && vb.isDate) return 1 // version > date
+    if (va.isDate && !vb.isDate) return -1 // date < version
+
+    if (va.num < vb.num) return -1
+    if (va.num > vb.num) return 1
+  }
+  return 0
+}
+
+// Reject model names with mushed version numbers (e.g. claude-opus-47 where 47
+// is missing the hyphen between 4 and 7). These appear as typos in the docs.
+// A valid model version segment is ≤ 99 (two-digit) but NOT a two-digit number
+// that can be split into two valid 1-2 digit version parts (e.g. 47 → 4-7).
+// Heuristic: if both `4-7` and `47` exist in raw HTML, `47` is a typo.
+// More generally: reject any numeric segment that is ≥ 10 and not a date (8 digits),
+// when a split version (preceding number + `-` + subsequent number) also exists.
+export function isSquashedVersion (match, allMatches) {
+  const parts = match.split('-')
+  for (const part of parts) {
+    if (/^\d+$/.test(part) && part.length !== 8) {
+      const n = parseInt(part, 10)
+      // Two-digit numbers (10-99) that are not dates are suspicious as mushed versions
+      if (n >= 10 && n <= 99) {
+        // Check if a split version exists: e.g. for '47', check if '4-7' pattern exists
+        // n as two separate digits: check each possible split point
+        const s = part
+        for (let splitPos = 1; splitPos < s.length; splitPos++) {
+          const a = s.substring(0, splitPos)
+          const b = s.substring(splitPos)
+          const splitVersion = match.replace(part, `${a}-${b}`)
+          if (allMatches.includes(splitVersion)) {
+            return true
+          }
+        }
+      }
+    }
+  }
+  return false
+}
+
+export async function fetchLatestModels () {
   const response = await fetch('https://docs.claude.com/en/docs/about-claude/models/overview')
   const html = await response.text()
 
@@ -23,55 +103,6 @@ async function fetchLatestModels () {
   const modelTypes = ['sonnet', 'haiku', 'opus']
   const models = {}
 
-  // Compare two model identifier strings by their numeric version segments.
-  // Each numeric segment is compared as an integer so that 6 > 5 and 10 > 6.
-  // Date segments (8-digit numbers like 20250514) are treated as lower-priority suffixes.
-  // Returns positive if a > b, negative if a < b, 0 if equal.
-  function compareModelVersions (a, b) {
-    const segmentsOf = str => {
-      const parts = str.split('-')
-      return parts.map(s => {
-        if (!s.match(/^\d+$/)) return s
-        const num = parseInt(s, 10)
-        // Treat 8-digit numbers as dates (lower priority than version numbers)
-        const isDate = s.length === 8
-        return { num, isDate }
-      })
-    }
-
-    const sa = segmentsOf(a)
-    const sb = segmentsOf(b)
-    const len = Math.max(sa.length, sb.length)
-
-    for (let i = 0; i < len; i++) {
-      const va = sa[i]
-      const vb = sb[i]
-
-      // Missing segment is lowest priority
-      if (!va) return -1
-      if (!vb) return 1
-
-      // String segments: lexicographic comparison
-      if (typeof va === 'string' && typeof vb === 'string') {
-        if (va < vb) return -1
-        if (va > vb) return 1
-        continue
-      }
-
-      // Mixed string/number: shouldn't happen, but treat strings as lower
-      if (typeof va === 'string') return -1
-      if (typeof vb === 'string') return 1
-
-      // Both are numbers: version number beats date, then compare numerically
-      if (!va.isDate && vb.isDate) return 1 // version > date
-      if (va.isDate && !vb.isDate) return -1 // date < version
-
-      if (va.num < vb.num) return -1
-      if (va.num > vb.num) return 1
-    }
-    return 0
-  }
-
   for (const modelType of modelTypes) {
     // Match both formats: with date (claude-opus-4-5-20250929) and without date (claude-opus-4-6)
     const anthropicPattern = new RegExp(`claude-${modelType}-\\d+(?:-\\d+)?(?:-\\d{8})?`, 'g')
@@ -79,37 +110,6 @@ async function fetchLatestModels () {
 
     const anthropicMatches = html.match(anthropicPattern)
     const bedrockMatches = html.match(bedrockPattern)
-
-    // Reject model names with mushed version numbers (e.g. claude-opus-47 where 47
-    // is missing the hyphen between 4 and 7). These appear as typos in the docs.
-    // A valid model version segment is ≤ 99 (two-digit) but NOT a two-digit number
-    // that can be split into two valid 1-2 digit version parts (e.g. 47 → 4-7).
-    // Heuristic: if both `4-7` and `47` exist in raw HTML, `47` is a typo.
-    // More generally: reject any numeric segment that is ≥ 10 and not a date (8 digits),
-    // when a split version (preceding number + `-` + subsequent number) also exists.
-    function isSquashedVersion (match, allMatches) {
-      const parts = match.split('-')
-      for (const part of parts) {
-        if (/^\d+$/.test(part) && part.length !== 8) {
-          const n = parseInt(part, 10)
-          // Two-digit numbers (10-99) that are not dates are suspicious as mushed versions
-          if (n >= 10 && n <= 99) {
-            // Check if a split version exists: e.g. for '47', check if '4-7' pattern exists
-            // n as two separate digits: check each possible split point
-            const s = part
-            for (let splitPos = 1; splitPos < s.length; splitPos++) {
-              const a = s.substring(0, splitPos)
-              const b = s.substring(splitPos)
-              const splitVersion = match.replace(part, `${a}-${b}`)
-              if (allMatches.includes(splitVersion)) {
-                return true
-              }
-            }
-          }
-        }
-      }
-      return false
-    }
 
     const filteredAnthropic = anthropicMatches
       ? [...new Set(anthropicMatches)].filter(m => !isSquashedVersion(m, anthropicMatches))
@@ -146,7 +146,7 @@ async function fetchLatestModels () {
   return models
 }
 
-async function updateFile (filePath, updates) {
+export async function updateFile (filePath, updates) {
   const content = await readFile(filePath, 'utf-8')
   let updatedContent = content
 
@@ -162,7 +162,7 @@ async function updateFile (filePath, updates) {
   return false
 }
 
-async function main () {
+export async function main () {
   try {
     console.log('Fetching latest Anthropic model identifiers...')
     const models = await fetchLatestModels()
@@ -273,4 +273,6 @@ async function main () {
   }
 }
 
-main()
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await main()
+}
