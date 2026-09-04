@@ -13,7 +13,7 @@
         "test:coverage": "c8 --check-coverage --lines 80 --statements 80 --functions 80 --branches 80 cucumber-js"
     },
     "dependencies": {
-        "@anthropic-ai/sdk": "0.68.0",
+        "@anthropic-ai/sdk": "0.122.0",
         "@anthropic-ai/tokenizer": "^0.0.4",
         "@aws-sdk/client-bedrock-runtime": "^3.621.0",
         "@aws-sdk/client-ssm": "^3.782.0",
