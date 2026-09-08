@@ -63,8 +63,11 @@ export default async function submitReview ({
     return true
   }
 
-  // skip if a watermark comment already reviewed this exact commit
-  if (headSha && messages.some(msg => msg.body.includes(watermark) && parseReviewedCommit(msg.body) === headSha)) {
+  // skip if a bot-authored watermark comment already reviewed this exact
+  // commit. the author check is required: [bot] logins are reserved for
+  // GitHub Apps, so users cannot spoof a comment that suppresses reviews.
+  // author may be null for deleted accounts
+  if (headSha && messages.some(msg => msg.author?.login?.endsWith('[bot]') && msg.body.includes(watermark) && parseReviewedCommit(msg.body) === headSha)) {
     if (debug) console.log(`already reviewed commit ${headSha}`)
     return true
   }
