@@ -69,7 +69,8 @@ export default async function explainPatch ({
   amplification = 2,
   region = 'us-east-1',
   debug = false,
-  include_diff = false
+  include_diff = false,
+  headSha = null
 }) {
   const client = new BedrockRuntimeClient({ region })
   const ssmClient = new SSMClient({ region })
@@ -164,7 +165,8 @@ export default async function explainPatch ({
         console.log(`full text:\n\n${fullText}`)
       }
       return fullText
-    }
+    },
+    headSha
   )
 }
 /* eslint-enable camelcase */

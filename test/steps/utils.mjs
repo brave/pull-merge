@@ -25,7 +25,7 @@ async function callHelper (world) {
     return world.response
   }
   try {
-    world.result = await utils.explainPatchHelper(world.patchBody, world.owner, world.repo, world.models, world.debug, getResponse)
+    world.result = await utils.explainPatchHelper(world.patchBody, world.owner, world.repo, world.models, world.debug, getResponse, world.headSha ?? null)
   } catch (err) {
     world.error = err
   }
@@ -71,6 +71,10 @@ Given('getResponse throws {string} for every model', function (message) {
 
 Given('debug is on', function () {
   this.debug = true
+})
+
+Given('the head sha is {string}', function (sha) {
+  this.headSha = sha
 })
 
 When('explainPatchHelper is called', async function () {
@@ -122,6 +126,11 @@ Then('{int} calls were made', function (count) {
 Then('the error {string} was logged', function (message) {
   const logs = mockState().logs
   expect(logs.some((line) => line.includes(message))).to.equal(true)
+})
+
+Then('the error {string} was not logged', function (message) {
+  const logs = mockState().logs
+  expect(logs.some((line) => line.includes(message))).to.equal(false)
 })
 
 Then('the user prompt was logged', function () {

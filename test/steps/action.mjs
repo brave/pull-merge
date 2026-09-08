@@ -24,6 +24,10 @@ Given('the action context has no pull request payload', function () {
   this.noPayload = true
 })
 
+Given('the action context has PR head sha {string}', function (sha) {
+  this.prHeadSha = sha
+})
+
 Given('the action inputs:', function (doc) {
   this.actionInputs = JSON.parse(trimDoc(doc))
 })
@@ -61,7 +65,12 @@ When('the action runs', async function () {
     actor: this.actor ?? 'test-actor',
     payload: this.noPayload
       ? {}
-      : { pull_request: { user: { login: this.prAuthor ?? this.actor ?? 'test-actor' } } }
+      : {
+          pull_request: {
+            user: { login: this.prAuthor ?? this.actor ?? 'test-actor' },
+            ...(this.prHeadSha ? { head: { sha: this.prHeadSha } } : {})
+          }
+        }
   }
   this.error = null
   this.result = undefined

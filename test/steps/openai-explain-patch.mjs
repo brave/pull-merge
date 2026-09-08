@@ -17,7 +17,8 @@ async function callOpenAI (world) {
       max_tokens: world.maxTokens ?? 3072,
       amplification: world.amplification ?? 2,
       include_diff: world.includeDiff ?? false,
-      debug: world.debug ?? false
+      debug: world.debug ?? false,
+      ...(world.headSha ? { headSha: world.headSha } : {})
     })
   } catch (err) {
     world.error = err
