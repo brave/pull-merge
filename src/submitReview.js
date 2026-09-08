@@ -1,3 +1,5 @@
+import { parseReviewedCommit } from './utils.js'
+
 function isOlderThanXHours (date, hours) {
   // Get the current date and time
   const now = new Date()
@@ -18,6 +20,7 @@ export default async function submitReview ({
   githubToken = null,
   header = '',
   github = null,
+  headSha = null,
   debug = false
 }) {
   if (!github && githubToken) {
@@ -57,6 +60,12 @@ export default async function submitReview ({
   // debounce if there are messages with watermark and the debounce time is not expired yet
   if (messages.some(msg => msg.body.includes(watermark) && !isOlderThanXHours(msg.updatedAt, debounceTime))) {
     if (debug) console.log('debounced')
+    return true
+  }
+
+  // skip if a watermark comment already reviewed this exact commit
+  if (headSha && messages.some(msg => msg.body.includes(watermark) && parseReviewedCommit(msg.body) === headSha)) {
+    if (debug) console.log(`already reviewed commit ${headSha}`)
     return true
   }
 

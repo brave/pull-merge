@@ -18,7 +18,8 @@ async function callBedrock (world) {
       ...(world.amplification ? { amplification: world.amplification } : {}),
       ...(world.region ? { region: world.region } : {}),
       include_diff: world.includeDiff ?? false,
-      debug: world.debug ?? false
+      debug: world.debug ?? false,
+      ...(world.headSha ? { headSha: world.headSha } : {})
     })
   } catch (err) {
     world.error = err

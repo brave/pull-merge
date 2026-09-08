@@ -18,7 +18,8 @@ async function callAnthropic (world) {
       ...(world.temperature !== undefined ? { temperature: world.temperature } : {}),
       ...(world.amplification ? { amplification: world.amplification } : {}),
       include_diff: world.includeDiff ?? false,
-      debug: world.debug ?? false
+      debug: world.debug ?? false,
+      ...(world.headSha ? { headSha: world.headSha } : {})
     })
   } catch (err) {
     world.error = err

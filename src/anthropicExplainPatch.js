@@ -11,7 +11,8 @@ export default async function explainPatch ({
   temperature = 1,
   amplification = 2,
   debug = false,
-  include_diff = false
+  include_diff = false,
+  headSha = null
 }) {
   const pLen = countTokens(patchBody)
   if (pLen === 0) { throw new Error('The patch is empty, cannot summarize!') }
@@ -44,7 +45,8 @@ export default async function explainPatch ({
         console.log(text)
       }
       return text
-    }
+    },
+    headSha
   )
 }
 /* eslint-enable camelcase */

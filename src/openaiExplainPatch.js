@@ -14,7 +14,8 @@ export default async function explainPatch ({
   presence_penalty = 0,
   amplification = 2,
   debug = false,
-  include_diff = false
+  include_diff = false,
+  headSha = null
 }) {
   const openai = new OpenAI({ apiKey })
 
@@ -106,7 +107,8 @@ export default async function explainPatch ({
         }
         throw err
       }
-    }
+    },
+    headSha
   )
 }
 /* eslint-enable camelcase */

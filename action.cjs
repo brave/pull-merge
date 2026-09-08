@@ -92,6 +92,10 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
       debug
     })
 
+    const headSha = context.payload.pull_request && context.payload.pull_request.head
+      ? context.payload.pull_request.head.sha
+      : undefined
+
     const explainPatchCb = async () => await explainPatch({
       apiKey: options.key,
       patchBody: filteredPatch,
@@ -103,7 +107,8 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
       max_tokens: options.max_tokens,
       region: options.region,
       include_diff: options.include_diff,
-      system: options.system_prompt
+      system: options.system_prompt,
+      headSha
     })
 
     let watermark = patch.watermark
@@ -128,6 +133,7 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
       header,
       explainPatch: explainPatchCb,
       debounceTime: options.debounce_time,
+      headSha,
       debug,
       github
     })
