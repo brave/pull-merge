@@ -42,7 +42,7 @@ export default async function submitReview ({
           comments(last: 100) {
             nodes {
               id
-              author { login }
+              author { login __typename }
               body
               updatedAt
             }
@@ -64,10 +64,11 @@ export default async function submitReview ({
   }
 
   // skip if a bot-authored watermark comment already reviewed this exact
-  // commit. the author check is required: [bot] logins are reserved for
-  // GitHub Apps, so users cannot spoof a comment that suppresses reviews.
-  // author may be null for deleted accounts
-  if (headSha && messages.some(msg => msg.author?.login?.endsWith('[bot]') && msg.body.includes(watermark) && parseReviewedCommit(msg.body) === headSha)) {
+  // commit. graphql reports app authors by their raw slug (github-actions,
+  // dependabot, ...) — the [bot] suffix only exists in the REST API — so the
+  // Bot __typename is the reliable signal; the [bot] login suffix is kept as
+  // a fallback. author may be null for deleted accounts
+  if (headSha && messages.some(msg => (msg.author?.__typename === 'Bot' || msg.author?.login?.endsWith('[bot]')) && msg.body.includes(watermark) && parseReviewedCommit(msg.body) === headSha)) {
     if (debug) console.log(`already reviewed commit ${headSha}`)
     return true
   }
