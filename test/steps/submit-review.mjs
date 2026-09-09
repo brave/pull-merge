@@ -42,12 +42,20 @@ Given('the explanation callback returns nothing', function () {
 Given('the PR has these comments:', function (table) {
   const st = mockState().github
   st.graphqlRoutes = st.graphqlRoutes.filter((r) => !r.isCommentsRoute && !r.isDeleteRoute)
-  const nodes = table.hashes().map((row) => ({
-    id: row.id,
-    author: { login: row.author || 'someone' },
-    body: row.body,
-    updatedAt: new Date(Date.now() - parseFloat(row.age_hours) * 3600e3).toISOString()
-  }))
+  const nodes = table.hashes().map((row) => {
+    const login = row.author || 'someone'
+    return {
+      id: row.id,
+      author: {
+        login,
+        // graphql reports app authors by their raw slug (e.g. github-actions),
+        // the [bot] suffix is a REST-only display convention
+        __typename: row.typename || (login.endsWith('[bot]') ? 'Bot' : 'User')
+      },
+      body: row.body,
+      updatedAt: new Date(Date.now() - parseFloat(row.age_hours) * 3600e3).toISOString()
+    }
+  })
   st.graphqlRoutes.push({
     isCommentsRoute: true,
     match: isCommentsQuery,
