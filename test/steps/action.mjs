@@ -28,6 +28,13 @@ Given('the action context has PR head sha {string}', function (sha) {
   this.prHeadSha = sha
 })
 
+Given('the PR head sha from the API is {string}', function (sha) {
+  mockState().github.requestRoutes.push({
+    match: (route, opts) => route === PULLS_ROUTE && opts?.mediaType?.format !== 'diff',
+    reply: { data: { head: { sha } } }
+  })
+})
+
 Given('the action inputs:', function (doc) {
   this.actionInputs = JSON.parse(trimDoc(doc))
 })
