@@ -92,9 +92,27 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
       debug
     })
 
-    const headSha = context.payload.pull_request && context.payload.pull_request.head
+    // head commit sha: prefer the pull_request event payload, otherwise
+    // (schedule / workflow_dispatch runs) fetch it from the PR so the
+    // same-commit skip can still fire
+    const fetchHeadSha = async () => {
+      try {
+        if (!Number.isFinite(options.prnum)) return undefined
+        const prResponse = await github.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
+          owner: options.owner,
+          repo: options.repo,
+          pull_number: options.prnum
+        })
+        return prResponse.data.head.sha
+      } catch (error) {
+        if (debug) console.log(`failed to fetch PR head sha: ${error.message}`)
+        return undefined
+      }
+    }
+
+    const headSha = context.payload.pull_request && context.payload.pull_request.head && context.payload.pull_request.head.sha
       ? context.payload.pull_request.head.sha
-      : undefined
+      : await fetchHeadSha()
 
     const explainPatchCb = async () => await explainPatch({
       apiKey: options.key,
