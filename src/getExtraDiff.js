@@ -26,7 +26,10 @@ function git (args) {
 // changes behind a submodule gitlink bump, which a PR diff cannot carry.
 // Pins default to the gitlink hunk of the PR diff when not passed
 // explicitly. If the prev pin is missing from the fetched repository (e.g.
-// a fork-only commit), the diff falls back to the empty tree.
+// a fork-only commit), the diff falls back to the empty tree. If the prev
+// pin exists but is not part of the head pin's history (e.g. a pin carried
+// over from a fork), the diff starts at the merge base of the two pins so
+// only changes actually on the target repository's side are reviewed.
 // All inputs are plain values: this module never runs caller-provided
 // commands.
 export default function getExtraDiff ({ inputs, patch, debug = false }) {
@@ -54,11 +57,29 @@ export default function getExtraDiff ({ inputs, patch, debug = false }) {
     }
 
     let base = prev
+    let found = true
     try {
       execFileSync('git', ['-C', dir, 'cat-file', '-e', `${base}^{commit}`])
     } catch (err) {
+      found = false
+    }
+    if (!found) {
       console.log(`Prev pin ${prev} not found on ${url}; diffing against the empty tree.`)
       base = EMPTY_TREE
+    } else {
+      let ancestor = true
+      try {
+        execFileSync('git', ['-C', dir, 'merge-base', '--is-ancestor', prev, head])
+      } catch (err) {
+        ancestor = false
+      }
+      if (!ancestor) {
+        // prev is not on head's history (e.g. a pin carried over from a
+        // fork): diff the changes made on the repository's side since the
+        // merge base instead of also reversing the fork's own commits.
+        base = git(['-C', dir, 'merge-base', prev, head]).trim() || EMPTY_TREE
+        console.log(`Prev pin ${prev} is not on ${url} history; diffing from merge base ${base}.`)
+      }
     }
 
     return git(['-C', dir, 'diff', `${base}..${head}`])

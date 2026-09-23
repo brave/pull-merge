@@ -44,6 +44,10 @@ Given('the git toolchain fails when the arguments contain {string}', function (f
   process.env.PM_GIT_FAIL = fragment
 })
 
+Given('the git toolchain reports merge base {string}', function (sha) {
+  process.env.PM_MERGE_BASE = sha
+})
+
 After(function () {
   if (this.wsDir) {
     rmSync(this.wsDir, { recursive: true, force: true })
@@ -55,6 +59,7 @@ After(function () {
   }
   delete process.env.PM_DIFF_CONTENT
   delete process.env.PM_GIT_FAIL
+  delete process.env.PM_MERGE_BASE
 })
 
 Given('the action context has actor {string}', function (actor) {

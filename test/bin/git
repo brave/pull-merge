@@ -11,4 +11,8 @@ if (process.env.PM_GIT_RECORD) {
 if (process.env.PM_GIT_FAIL && process.env.PM_GIT_FAIL.split('|').some((fragment) => args.join(' ').includes(fragment))) {
   process.exit(1)
 }
+if (args.includes('merge-base') && process.env.PM_MERGE_BASE !== undefined) {
+  process.stdout.write(process.env.PM_MERGE_BASE)
+  process.exit(0)
+}
 process.stdout.write(process.env.PM_DIFF_CONTENT ?? '')

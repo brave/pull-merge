@@ -51,6 +51,10 @@ How it works:
 - If the prev pin is missing from the fetched repository (e.g. a fork-only
   commit right after a submodule repoint), the diff falls back to the empty
   tree so the whole watched content gets reviewed once.
+- If the prev pin is fetchable but is not part of the head pin's history
+  (e.g. the old pin still points at a fork), the diff starts at
+  `git merge-base prev head` so only changes made on the fetched
+  repository's side are reviewed — the fork's own commits are not reversed.
 - The fetched diff is appended to the PR diff **before** `filterdiff`, so the
   repository's `filterdiff_args` scope applies to the appended content as
   well.

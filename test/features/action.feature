@@ -375,6 +375,32 @@ Feature: action orchestrator
     And a log line containing "not found on" was recorded
     And the puLL-Merge label was added
 
+  Scenario: a prev pin not on the repository history diffs from the merge base
+    Given the action PR diff is:
+      """
+      --- a/submodules/uBlock
+      +++ b/submodules/uBlock
+      @@ -1 +1 @@
+      -Subproject commit 1111111111111111111111111111111111111111
+      +Subproject commit 2222222222222222222222222222222222222222
+      """
+    And the git toolchain records its invocation
+    And the git toolchain fails when the arguments contain "merge-base --is-ancestor"
+    And the git toolchain reports merge base "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    And the git toolchain diff content is "MERGE_BASE_DIFF"
+    And the filterdiff shim records its invocation to a state file
+    And the action inputs:
+      """
+      {"include_diff": "true", "debug": "true", "extra_diff_repository": "https://example.com/repo.git"}
+      """
+    When the action runs
+    Then it resolves to undefined
+    And the git toolchain diffed "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" to "2222222222222222222222222222222222222222"
+    And a log line containing "is not on" was recorded
+    And a log line containing "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" was recorded
+    And the filterdiff shim received stdin containing "MERGE_BASE_DIFF"
+    And the puLL-Merge label was added
+
   Scenario: extra_diff_repository without resolvable pins rejects the run
     Given the action inputs:
       """
