@@ -64,6 +64,25 @@ inputs:
     description: |
       Include the diff in the generated text
     required: false
+  extra_diff_repository:
+    description: |
+      Repository to fetch for an extra diff appended to the PR patch before
+      filtering — e.g. the URL of a repository bumped by the PR as a
+      submodule, whose gitlink-only diff carries no real content. No
+      checkout of this repository is required.
+    required: false
+  extra_diff_head:
+    description: |
+      HEAD pin of the extra diff. Defaults to the new pin parsed from the
+      gitlink hunk of the PR diff.
+    required: false
+  extra_diff_prev:
+    description: |
+      Previous pin of the extra diff (the diff covers prev..head). Defaults
+      to the old pin parsed from the gitlink hunk of the PR diff; if the
+      prev pin is missing from the fetched repository, the diff falls back
+      to the empty tree.
+    required: false
   system_prompt:
     description: |
       Custom system prompt for the LLM. If not provided, uses the default from utils.js

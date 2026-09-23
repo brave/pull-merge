@@ -6,6 +6,7 @@
     "src/filterdiff.js",
     "src/getConfig.js",
     "src/getDependabotPatch.js",
+    "src/getExtraDiff.js",
     "src/getPatch.js",
     "src/getProperties.js",
     "src/getRenovatePatch.js",
