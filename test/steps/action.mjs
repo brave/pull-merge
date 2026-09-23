@@ -1,5 +1,8 @@
-import { Before, Given, When, Then } from '@cucumber/cucumber'
+import { Before, After, Given, When, Then } from '@cucumber/cucumber'
 import { expect } from 'chai'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 import fc from 'fast-check'
 import { makeGithub } from '../support/fake-github.mjs'
 import { mockState, resetState } from '../support/state.mjs'
@@ -10,6 +13,18 @@ const PULLS_ROUTE = 'GET /repos/{owner}/{repo}/pulls/{pull_number}'
 
 Before(function () {
   delete process.env.DEBUG
+})
+
+Given('a GITHUB_WORKSPACE directory', function () {
+  this.wsDir = mkdtempSync(path.join(tmpdir(), 'pm-ws-'))
+  process.env.GITHUB_WORKSPACE = this.wsDir
+})
+
+After(function () {
+  if (this.wsDir) {
+    rmSync(this.wsDir, { recursive: true, force: true })
+    delete this.wsDir
+  }
 })
 
 Given('the action context has actor {string}', function (actor) {
@@ -112,6 +127,11 @@ Then('a comment was created containing {string}', function (fragment) {
   const calls = mockState().github.restCalls['issues.createComment']
   expect(calls).to.have.lengthOf(1)
   expect(calls[0].body).to.contain(fragment)
+})
+
+Then('no comment was created containing {string}', function (fragment) {
+  const calls = mockState().github.restCalls['issues.createComment'] ?? []
+  expect(calls.some((call) => call.body.includes(fragment))).to.equal(false)
 })
 
 Then('it rejects with an error containing {string}', function (fragment) {

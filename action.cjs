@@ -86,6 +86,15 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
       github
     })
 
+    // Append caller-fetched content (e.g. a submodule diff) to the patch
+    // before filtering, so it flows through the same filterdiff scope.
+    const { default: getExtraDiff } = await import(`${actionPath}/src/getExtraDiff.js`)
+    const extraDiff = await getExtraDiff({ inputs, debug })
+    if (extraDiff) {
+      if (debug) { console.log(`Appending ${extraDiff.length} bytes of extra diff from extra_diff_command`) }
+      patch.body = `${patch.body}\n${extraDiff}`
+    }
+
     const filteredPatch = await filterdiff({
       content: patch.body,
       args: options.filterdiff_args,

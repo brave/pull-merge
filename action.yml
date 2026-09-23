@@ -64,6 +64,15 @@ inputs:
     description: |
       Include the diff in the generated text
     required: false
+  extra_diff_command:
+    description: |
+      Shell command run in the repository checkout (GITHUB_WORKSPACE) whose
+      stdout is appended to the PR diff before filtering. Useful for content
+      the PR diff cannot carry, e.g. submodule bumps where the PR diff only
+      contains a gitlink hunk. Requires the repository to be checked out.
+      Only honored when passed as an action input, never from repository
+      config or properties.
+    required: false
   system_prompt:
     description: |
       Custom system prompt for the LLM. If not provided, uses the default from utils.js
