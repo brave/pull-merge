@@ -7,6 +7,7 @@ export function freshState () {
       chatCalls: [],
       completionCalls: [],
       chatResponse: { choices: [{ message: { content: '' } }] },
+      chatQueue: [],
       chatError: null,
       completionResponse: { choices: [{ text: '' }] },
       completionError: null
@@ -15,6 +16,9 @@ export function freshState () {
       constructorArgs: [],
       streamCalls: [],
       streamText: '',
+      streamTexts: [],
+      streamStop: 'end_turn',
+      streamStops: [],
       streamError: null,
       streamErrors: []
     },
@@ -35,6 +39,7 @@ export function freshState () {
       ssmError: null,
       invocations: [],
       chunks: [],
+      chunkQueue: [],
       sendError: null,
       sendErrors: [],
       invalidChunk: false

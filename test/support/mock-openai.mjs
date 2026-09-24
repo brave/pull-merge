@@ -8,6 +8,9 @@ export default class OpenAI {
         create: async (params) => {
           const st = mockState().openai
           st.chatCalls.push(params)
+          if (st.chatQueue.length > 0) {
+            return st.chatQueue.shift()
+          }
           if (st.chatError) throw st.chatError
           return st.chatResponse
         }

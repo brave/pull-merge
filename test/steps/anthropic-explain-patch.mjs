@@ -30,6 +30,18 @@ Given('the stream response text is {string}', function (text) {
   mockState().anthropic.streamText = text
 })
 
+Given('the first stream call truncates with text {string}', function (text) {
+  const st = mockState().anthropic
+  st.streamTexts = [text]
+  st.streamStops = ['max_tokens']
+})
+
+Given('every stream call truncates with text {string}', function (text) {
+  const st = mockState().anthropic
+  st.streamText = text
+  st.streamStop = 'max_tokens'
+})
+
 Given('the stream fails with {string}', function (message) {
   mockState().anthropic.streamError = new Error(message)
 })

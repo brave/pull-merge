@@ -12,7 +12,8 @@ export class BedrockRuntimeClient {
     if (queued) throw queued
     if (st.sendError) throw st.sendError
     const encoder = new TextEncoder()
-    const chunks = st.chunks.map(c => ({ chunk: { bytes: encoder.encode(c) } }))
+    const queuedChunks = st.chunkQueue.length > 0 ? st.chunkQueue.shift() : st.chunks
+    const chunks = queuedChunks.map(c => ({ chunk: { bytes: encoder.encode(c) } }))
     if (st.invalidChunk) {
       chunks.push({ notChunk: true })
     }
