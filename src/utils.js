@@ -28,7 +28,9 @@ Desired format:
 \`\`\`
 \n`
 
-const re = /(### Changes[\s\S]*?\n)###\s/g
+// non-global on purpose: a global regex used with .test() keeps
+// lastIndex across calls and silently flips results between runs
+const re = /(### Changes[\s\S]*?\n)###\s/
 const mermaidRe = /```mermaid\n[\s\S]*?```/g
 
 // parse the reviewed commit sha embedded by explainPatchHelper in the
@@ -77,12 +79,20 @@ export async function explainPatchHelper (patchBody, owner, repo, models, debug,
     diagrams.push(diagram)
   }
 
-  response = response.replaceAll('### Changes', '<details>\n<summary><i>Changes</i></summary>\n\n### Changes')
+  // only wrap in a details block when a Changes section exists; a
+  // truncated response without one must not get a dangling closing tag
+  const hasChanges = response.includes('### Changes')
 
-  if (re.test(response)) {
-    response = response.replaceAll(/(### Changes[\s\S]*?\n)###\s/g, `$1${diagrams.join('\n')}\n</details>\n\n### `)
-  } else {
-    response += `${diagrams.join('\n')}\n</details>`
+  if (hasChanges) {
+    response = response.replaceAll('### Changes', '<details>\n<summary><i>Changes</i></summary>\n\n### Changes')
+
+    if (re.test(response)) {
+      response = response.replaceAll(/(### Changes[\s\S]*?\n)###\s/g, `$1${diagrams.join('\n')}\n</details>\n\n### `)
+    } else {
+      response += `${diagrams.join('\n')}\n</details>`
+    }
+  } else if (diagrams.length > 0) {
+    response += `\n${diagrams.join('\n')}`
   }
 
   response = response.replaceAll('### C4 Diagram', '')

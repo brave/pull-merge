@@ -76,7 +76,7 @@ Feature: Anthropic model update script
   Scenario: no changes when the defaults already match
     Given the docs page at "https://docs.claude.com/en/docs/about-claude/models/overview" contains:
       """
-      claude-opus-5 anthropic.claude-opus-5-v1:0
+      claude-opus-5-5 anthropic.claude-opus-5-5-v1:0
       """
     When the anthropic script module is imported
     And anthropic main is called
