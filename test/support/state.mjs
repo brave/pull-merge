@@ -10,6 +10,7 @@ export function freshState () {
       chatQueue: [],
       chatError: null,
       completionResponse: { choices: [{ text: '' }] },
+      completionQueue: [],
       completionError: null
     },
     anthropic: {

@@ -71,6 +71,18 @@ Feature: action orchestrator
     And a comment was created containing "bedrock debug - [[puLL-Merge]"
     And the puLL-Merge label was added
 
+  Scenario: an empty max_tokens input falls back to the default
+    Number("") is 0; the action must fall back to the default instead
+    of sending max_tokens: 0 to the provider.
+    Given the action inputs:
+      """
+      {"max_tokens": "", "anthropic_api_key": "sk-ant-test", "debug": "true"}
+      """
+    And the stream response text is "the review"
+    When the action runs
+    Then 1 stream call was made
+    And stream request 1 used model "claude-opus-5-5" temperature 1.0 and max tokens 16384
+
   Scenario: subtle mode updates the PR description instead of commenting
     Given the action inputs:
       """

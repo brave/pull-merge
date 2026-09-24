@@ -29,6 +29,9 @@ export default async function explainPatch ({
   return await explainPatchHelper(
     patchBody, owner, repo, models, debug,
     async (userPrompt, model) => {
+      if (!(Number(max_tokens) > 0)) {
+        throw new Error('max_tokens must be a positive number')
+      }
       // A truncated review must never be posted: on stop_reason=max_tokens
       // retry once with a doubled budget; when the model rejects a budget
       // above its output cap, clamp to the advertised limit instead.
