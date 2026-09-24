@@ -15,9 +15,10 @@ export default async function explainPatch ({
   amplification = 2,
   debug = false,
   include_diff = false,
-  headSha = null
+  headSha = null,
+  baseURL = null
 }) {
-  const openai = new OpenAI({ apiKey })
+  const openai = new OpenAI(baseURL ? { apiKey, baseURL } : { apiKey })
 
   return await explainPatchHelper(
     patchBody, owner, repo, models, debug,

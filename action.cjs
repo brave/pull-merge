@@ -126,6 +126,7 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
       region: options.region,
       include_diff: options.include_diff,
       system: options.system_prompt,
+      baseURL: options.openai_endpoint || undefined,
       headSha
     })
 

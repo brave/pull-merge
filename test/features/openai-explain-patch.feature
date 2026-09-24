@@ -28,6 +28,14 @@ Feature: openaiExplainPatch
     And chat request 1 used model "test-model" temperature 1.0 and max tokens 3072
     And chat request 1 carries the system and user prompts
 
+  Scenario: optional endpoint overrides the default API base URL
+    Given the openai endpoint is "https://llm.example.com/v1"
+    And the patch tokenizes to 6144 tokens
+    And the chat response content is "the review"
+    When openaiExplainPatch is called
+    Then the OpenAI client was constructed with endpoint "https://llm.example.com/v1"
+    And 1 chat completion was called
+
   Scenario: debug logs the user prompt and chat response
     Given the patch tokenizes to 6144 tokens
     And the chat response content is "the review"

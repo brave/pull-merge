@@ -18,6 +18,7 @@ async function callOpenAI (world) {
       amplification: world.amplification ?? 2,
       include_diff: world.includeDiff ?? false,
       debug: world.debug ?? false,
+      ...(world.baseURL ? { baseURL: world.baseURL } : {}),
       ...(world.headSha ? { headSha: world.headSha } : {})
     })
   } catch (err) {
@@ -36,6 +37,10 @@ Given('max tokens {int}', function (maxTokens) {
 
 Given('the model is unknown to tiktoken', function () {
   mockState().tiktoken.encodingForModelThrows = true
+})
+
+Given('the openai endpoint is {string}', function (baseURL) {
+  this.baseURL = baseURL
 })
 
 Given('include_diff is on', function () {
@@ -116,6 +121,12 @@ Then('the OpenAI client was constructed with api key {string}', function (apiKey
   const args = mockState().openai.constructorArgs
   expect(args).to.have.lengthOf(1)
   expect(args[0]).to.deep.equal({ apiKey })
+})
+
+Then('the OpenAI client was constructed with endpoint {string}', function (baseURL) {
+  const args = mockState().openai.constructorArgs
+  expect(args).to.have.lengthOf(1)
+  expect(args[0].baseURL).to.equal(baseURL)
 })
 
 Then('the chat response was logged', function () {

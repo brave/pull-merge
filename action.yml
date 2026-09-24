@@ -9,6 +9,10 @@ inputs:
   openai_api_key:
     description: |
       API key to interact with the OpenAI endpoint
+  openai_endpoint:
+    description: |
+      Optional base URL of an OpenAI-compatible endpoint, for example
+      https://llm.example.com/v1. Defaults to https://api.openai.com/v1
   anthropic_api_key:
     description: |
       API key to interact with the Anthropic endpoint
