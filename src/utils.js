@@ -30,7 +30,9 @@ Desired format:
 
 // non-global on purpose: a global regex used with .test() keeps
 // lastIndex across calls and silently flips results between runs
-const re = /(### Changes[\s\S]*?\n)###\s/
+// matches the real "### Changes" heading line only: the newline right
+// after the heading rules out inline prose mentions like "`### Changes`"
+const re = /(### Changes\n[\s\S]*?\n)###\s/
 const mermaidRe = /```mermaid\n[\s\S]*?```/g
 
 // The trivial-patch cutoff is deliberately independent of the output
@@ -104,13 +106,15 @@ export async function explainPatchHelper (patchBody, owner, repo, models, debug,
 
   // only wrap in a details block when a Changes section exists; a
   // truncated response without one must not get a dangling closing tag
-  const hasChanges = response.includes('### Changes')
+  const hasChanges = /(^|\n)### Changes\s*(\n|$)/.test(response)
 
   if (hasChanges) {
-    response = response.replaceAll('### Changes', '<details>\n<summary><i>Changes</i></summary>\n\n### Changes')
+    // only the heading line is turned into the details opener; prose
+    // mentioning "### Changes" inline must stay untouched
+    response = response.replace(/(^|\n)### Changes(?=\s*\n|$)/g, '$1<details>\n<summary><i>Changes</i></summary>\n\n### Changes')
 
     if (re.test(response)) {
-      response = response.replaceAll(/(### Changes[\s\S]*?\n)###\s/g, `$1${diagrams.join('\n')}\n</details>\n\n### `)
+      response = response.replaceAll(/(### Changes\n[\s\S]*?\n)###\s/g, `$1${diagrams.join('\n')}\n</details>\n\n### `)
     } else {
       response += `${diagrams.join('\n')}\n</details>`
     }
