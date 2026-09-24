@@ -23,6 +23,9 @@ export default async function explainPatch ({
   return await explainPatchHelper(
     patchBody, owner, repo, models, debug,
     async (userPrompt, model) => {
+      if (!(Number(max_tokens) > 0)) {
+        throw new Error('max_tokens must be a positive number')
+      }
       let enc
       try {
         enc = encoding_for_model(model)
@@ -157,8 +160,9 @@ export default async function explainPatch ({
 
       let endpoint = 'chat'
       let budget = max_tokens
+      let ceiling = Infinity
       let retries = 0
-      const attemptFor = async (name, budget) => {
+      const attemptFor = async (budget) => {
         if (endpoint === 'responses') return await responsesAttempt(budget)
         if (endpoint === 'completions') return await completionsAttempt(budget)
         return await chatAttempt(budget)
@@ -166,23 +170,26 @@ export default async function explainPatch ({
       for (;;) {
         let outcome
         try {
-          outcome = await attemptFor(endpoint, budget)
+          outcome = await attemptFor(budget)
         } catch (err) {
           const limit = outputTokenLimit(err, budget)
           if (limit !== null && limit < budget) {
+            ceiling = limit
             budget = limit
             continue
           }
           if (endpoint === 'chat' && err.status === 404 && err.error?.type === 'invalid_request_error') {
             // Codex / reasoning models only support the v1/responses
             // endpoint. The SDK returns this hint in the 404 message.
+            // The hop happens at most once per model; reclassify and
+            // retry through the loop so cap errors thrown by the
+            // fallback endpoint clamp too.
             endpoint = /v1\/responses/i.test(err.error?.message || err.message || '')
               ? 'responses'
               : 'completions'
-            outcome = await attemptFor(endpoint, budget)
-          } else {
-            throw err
+            continue
           }
+          throw err
         }
         if (!outcome.truncated) {
           return outcome.text
@@ -191,8 +198,12 @@ export default async function explainPatch ({
           throw new Error(`Review response truncated at ${budget} output tokens (${outcome.detail})`)
         }
         retries++
-        console.log(`Review response truncated at ${budget} output tokens; retrying with ${budget * 2}`)
-        budget *= 2
+        const next = Math.min(budget * 2, ceiling)
+        if (next <= budget) {
+          throw new Error(`Review response truncated at ${budget} output tokens (${outcome.detail})`)
+        }
+        console.log(`Review response truncated at ${budget} output tokens; retrying with ${next}`)
+        budget = next
       }
     },
     headSha

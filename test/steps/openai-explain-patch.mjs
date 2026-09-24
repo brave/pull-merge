@@ -51,7 +51,25 @@ Given('the first chat call truncates with content {string}', function (content) 
 })
 
 Given('the first chat call rejects the token budget with {string}', function (message) {
-  mockState().openai.chatQueue = [Object.assign(new Error(message), { status: 400 })]
+  // appends so it can be combined with other queue steps
+  mockState().openai.chatQueue.push(Object.assign(new Error(message), { status: 400 }))
+})
+
+Given('the chat endpoint fails on the first call with status {int} type {string} and message {string}', function (status, type, message) {
+  mockState().openai.chatQueue = [
+    Object.assign(new Error(message), { status, error: { type } }),
+    ...mockState().openai.chatQueue
+  ]
+})
+
+Then('legacy request {int} used max tokens {int}', function (index, tokens) {
+  const call = mockState().openai.completionCalls[index - 1]
+  expect(call, `legacy completion ${index} was not made`).to.not.equal(undefined)
+  expect(call.max_tokens).to.equal(tokens)
+})
+
+Given('the first legacy completion rejects the token budget with {string}', function (message) {
+  mockState().openai.completionQueue = [Object.assign(new Error(message), { status: 400 })]
 })
 
 Given('the chat response finishes with {string}', function (finish) {

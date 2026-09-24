@@ -35,7 +35,7 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
   options.debounce_time = parseFloat(options.debounce_time, 10)
   options.amplification = parseFloat(options.amplification, 10)
   options.prnum = parseFloat(options.prnum, 10)
-  options.max_tokens = Number(options.max_tokens)
+  options.max_tokens = Number(options.max_tokens) || 16384
   options.subtle_mode = options.subtle_mode === 'true'
   options.include_diff = options.include_diff === 'true'
 

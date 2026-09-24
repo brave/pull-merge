@@ -32,7 +32,8 @@ Desired format:
 // lastIndex across calls and silently flips results between runs
 // matches the real "### Changes" heading line only: the newline right
 // after the heading rules out inline prose mentions like "`### Changes`"
-const re = /(### Changes\n[\s\S]*?\n)###\s/
+// trailing spaces or CRLF line endings are tolerated
+const re = /(### Changes[ \t]*\r?\n[\s\S]*?\n)###\s/
 const mermaidRe = /```mermaid\n[\s\S]*?```/g
 
 // The trivial-patch cutoff is deliberately independent of the output
@@ -46,12 +47,23 @@ export const TRIVIAL_PATCH_TOKENS = 3072
 // error is unrelated. Only numbers below the attempted budget count as
 // candidates so request ids or model names in the message cannot
 // inflate the ceiling.
+// Parse an output-token limit from a 400-style "max_tokens too large"
+// error (Anthropic/OpenAI APIError with status 400, Bedrock
+// ValidationException). Returns the advertised limit or null when the
+// error is unrelated. Only numbers below the attempted budget count as
+// candidates so request ids or model names in the message cannot
+// inflate the ceiling. Context-length errors are rejected: they match
+// the same keywords but describe the prompt, so clamping on them
+// would retry at a bogus budget instead of surfacing the real error.
 export function outputTokenLimit (err, budget) {
   const status = err?.status ?? err?.$metadata?.httpStatusCode
   const name = err?.name ?? ''
   if (status !== 400 && name !== 'ValidationException') return null
   const message = String(err?.message ?? '')
-  if (!/max_tokens|maximum|too large|too long|at most/i.test(message)) return null
+  if (/context (length|window)/i.test(message)) return null
+  // require an explicit output-token mention so ids or model names in
+  // the message cannot select the ceiling
+  if (!/max_tokens|max output|output tokens|completion tokens/i.test(message)) return null
   const caps = [...message.matchAll(/\d{3,}/g)]
     .map((m) => Number(m[0]))
     .filter((n) => n >= 256 && n < budget)
@@ -114,7 +126,7 @@ export async function explainPatchHelper (patchBody, owner, repo, models, debug,
     response = response.replace(/(^|\n)### Changes(?=\s*\n|$)/g, '$1<details>\n<summary><i>Changes</i></summary>\n\n### Changes')
 
     if (re.test(response)) {
-      response = response.replaceAll(/(### Changes\n[\s\S]*?\n)###\s/g, `$1${diagrams.join('\n')}\n</details>\n\n### `)
+      response = response.replaceAll(/(### Changes[ \t]*\r?\n[\s\S]*?\n)###\s/g, `$1${diagrams.join('\n')}\n</details>\n\n### `)
     } else {
       response += `${diagrams.join('\n')}\n</details>`
     }

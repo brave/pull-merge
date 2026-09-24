@@ -98,6 +98,9 @@ export default async function explainPatch ({
   return await explainPatchHelper(
     patchBody, owner, repo, models, debug,
     async (userPrompt, model) => {
+      if (!(Number(max_tokens) > 0)) {
+        throw new Error('max_tokens must be a positive number')
+      }
       const pLen = countTokens(patchBody, model)
 
       if (pLen === 0) { throw new Error('The patch is empty, cannot summarize!') }

@@ -22,6 +22,11 @@ export default class OpenAI {
       create: async (params) => {
         const st = mockState().openai
         st.completionCalls.push(params)
+        if (st.completionQueue.length > 0) {
+          const item = st.completionQueue.shift()
+          if (item instanceof Error) throw item
+          return item
+        }
         if (st.completionError) throw st.completionError
         return st.completionResponse
       }
