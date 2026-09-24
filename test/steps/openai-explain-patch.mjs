@@ -50,6 +50,14 @@ Given('the first chat call truncates with content {string}', function (content) 
   mockState().openai.chatQueue = [{ choices: [{ message: { content }, finish_reason: 'length' }] }]
 })
 
+Given('the first chat call rejects the token budget with {string}', function (message) {
+  mockState().openai.chatQueue = [Object.assign(new Error(message), { status: 400 })]
+})
+
+Given('the chat response finishes with {string}', function (finish) {
+  mockState().openai.chatResponse = { choices: [{ message: { content: 'the review' }, finish_reason: finish }] }
+})
+
 Given('every chat call truncates with content {string}', function (content) {
   mockState().openai.chatResponse = { choices: [{ message: { content }, finish_reason: 'length' }] }
 })

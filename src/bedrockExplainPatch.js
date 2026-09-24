@@ -7,7 +7,7 @@ import {
   SSMClient,
   GetParameterCommand
 } from '@aws-sdk/client-ssm'
-import { SYSTEM_PROMPT, explainPatchHelper } from './utils.js'
+import { SYSTEM_PROMPT, TRIVIAL_PATCH_TOKENS, outputTokenLimit, explainPatchHelper } from './utils.js'
 
 const COUNT_TOKENS_HASHFUN = {
   'amazon.titan-text-express-v1': null,
@@ -73,6 +73,7 @@ export default async function explainPatch ({
   include_diff = false,
   headSha = null
 }) {
+  max_tokens = Number(max_tokens)
   const client = new BedrockRuntimeClient({ region })
   const ssmClient = new SSMClient({ region })
 
@@ -100,7 +101,7 @@ export default async function explainPatch ({
       const pLen = countTokens(patchBody, model)
 
       if (pLen === 0) { throw new Error('The patch is empty, cannot summarize!') }
-      if (pLen < amplification * max_tokens) {
+      if (pLen < amplification * TRIVIAL_PATCH_TOKENS) {
         if (include_diff) {
           return ''
         }
@@ -108,6 +109,8 @@ export default async function explainPatch ({
       }
 
       let budget = max_tokens
+      let ceiling = Infinity
+      let retries = 0
       for (;;) {
         const commandParams = {
           modelId: model,
@@ -144,6 +147,12 @@ export default async function explainPatch ({
           }
           raw += decoder.decode() // flush remaining multi-byte chars
         } catch (e) {
+          const limit = outputTokenLimit(e, budget)
+          if (limit !== null && limit < budget) {
+            ceiling = limit
+            budget = limit
+            continue
+          }
           throw new Error('Bedrock stream failed', { cause: e })
         }
         let fullText = ''
@@ -155,14 +164,24 @@ export default async function explainPatch ({
               fullText += event.delta.text
             } else if (event.type === 'message_delta' && event.delta?.stop_reason) {
               stopReason = event.delta.stop_reason
+            } else if (event.type === 'error') {
+              throw new Error(`Bedrock stream error event: ${JSON.stringify(event)}`)
             } else if (debug && event.type === 'message_stop') {
               console.log(`stop reason: ${JSON.stringify(event)}`)
             }
           } catch (e) {
+            if (!(e instanceof SyntaxError)) {
+              throw e
+            }
             if (debug) {
               console.log(`skipping non-JSON line: ${e.message}`)
             }
           }
+        }
+        // a stream that ends without a stop reason (dropped connection,
+        // mid-stream exception) must never pass as complete
+        if (stopReason === null) {
+          throw new Error('Bedrock stream ended without a stop reason')
         }
         if (!fullText) {
           throw new Error('Bedrock stream produced no text')
@@ -173,11 +192,16 @@ export default async function explainPatch ({
         if (stopReason !== 'max_tokens') {
           return fullText
         }
-        if (budget >= max_tokens * 2) {
+        if (retries >= 1) {
           throw new Error(`Review response truncated at ${budget} output tokens (stop_reason=max_tokens)`)
         }
-        console.log(`Review response truncated at ${budget} output tokens; retrying with ${budget * 2}`)
-        budget *= 2
+        retries++
+        const next = Math.min(budget * 2, ceiling)
+        if (next <= budget) {
+          throw new Error(`Review response truncated at ${budget} output tokens (stop_reason=max_tokens)`)
+        }
+        console.log(`Review response truncated at ${budget} output tokens; retrying with ${next}`)
+        budget = next
       }
     },
     headSha
