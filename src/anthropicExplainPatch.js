@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { countTokens } from '@anthropic-ai/tokenizer'
-import { SYSTEM_PROMPT, explainPatchHelper } from './utils.js'
+import { SYSTEM_PROMPT, TRIVIAL_PATCH_TOKENS, outputTokenLimit, explainPatchHelper } from './utils.js'
 
 /* eslint-disable camelcase */
 export default async function explainPatch ({
@@ -14,9 +14,10 @@ export default async function explainPatch ({
   include_diff = false,
   headSha = null
 }) {
+  max_tokens = Number(max_tokens)
   const pLen = countTokens(patchBody)
   if (pLen === 0) { throw new Error('The patch is empty, cannot summarize!') }
-  if (pLen < amplification * max_tokens) {
+  if (pLen < amplification * TRIVIAL_PATCH_TOKENS) {
     if (include_diff) {
       return ''
     }
@@ -28,23 +29,37 @@ export default async function explainPatch ({
   return await explainPatchHelper(
     patchBody, owner, repo, models, debug,
     async (userPrompt, model) => {
-      // retry once with a doubled budget when the model hits the output
-      // cap; a truncated review must never be posted
+      // A truncated review must never be posted: on stop_reason=max_tokens
+      // retry once with a doubled budget; when the model rejects a budget
+      // above its output cap, clamp to the advertised limit instead.
       let budget = max_tokens
+      let ceiling = Infinity
+      let retries = 0
       for (;;) {
-        const stream = anthropic.messages.stream({
-          max_tokens: budget,
-          temperature,
-          model,
-          system,
-          messages: [
-            {
-              role: 'user',
-              content: userPrompt
-            }
-          ]
-        })
-        const final = await stream.finalMessage()
+        let final
+        try {
+          const stream = anthropic.messages.stream({
+            max_tokens: budget,
+            temperature,
+            model,
+            system,
+            messages: [
+              {
+                role: 'user',
+                content: userPrompt
+              }
+            ]
+          })
+          final = await stream.finalMessage()
+        } catch (err) {
+          const limit = outputTokenLimit(err, budget)
+          if (limit === null || limit >= budget) {
+            throw err
+          }
+          ceiling = limit
+          budget = limit
+          continue
+        }
         const text = final.content
           .filter((block) => block.type === 'text')
           .map((block) => block.text)
@@ -55,11 +70,16 @@ export default async function explainPatch ({
         if (final.stop_reason !== 'max_tokens') {
           return text
         }
-        if (budget >= max_tokens * 2) {
+        if (retries >= 1) {
           throw new Error(`Review response truncated at ${budget} output tokens (stop_reason=max_tokens)`)
         }
-        console.log(`Review response truncated at ${budget} output tokens; retrying with ${budget * 2}`)
-        budget *= 2
+        retries++
+        const next = Math.min(budget * 2, ceiling)
+        if (next <= budget) {
+          throw new Error(`Review response truncated at ${budget} output tokens (stop_reason=max_tokens)`)
+        }
+        console.log(`Review response truncated at ${budget} output tokens; retrying with ${next}`)
+        budget = next
       }
     },
     headSha

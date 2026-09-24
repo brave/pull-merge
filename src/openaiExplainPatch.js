@@ -1,7 +1,7 @@
 import OpenAI from 'openai'
 /* eslint-disable camelcase */
 import { encoding_for_model, get_encoding } from 'tiktoken'
-import { SYSTEM_PROMPT, explainPatchHelper } from './utils.js'
+import { SYSTEM_PROMPT, TRIVIAL_PATCH_TOKENS, outputTokenLimit, explainPatchHelper } from './utils.js'
 
 export default async function explainPatch ({
   apiKey, patchBody, owner, repo,
@@ -17,6 +17,7 @@ export default async function explainPatch ({
   include_diff = false,
   headSha = null
 }) {
+  max_tokens = Number(max_tokens)
   const openai = new OpenAI({ apiKey })
 
   return await explainPatchHelper(
@@ -31,7 +32,7 @@ export default async function explainPatch ({
       const pLen = enc.encode(patchBody).length
 
       if (pLen === 0) { throw new Error('The patch is empty, cannot summarize!') }
-      if (pLen < amplification * max_tokens) {
+      if (pLen < amplification * TRIVIAL_PATCH_TOKENS) {
         if (include_diff) {
           return ''
         }
@@ -40,7 +41,8 @@ export default async function explainPatch ({
 
       // the chat endpoint is tried first; 404 invalid_request_error
       // responses classify into the responses or legacy completions
-      // endpoints, every other API error is rethrown
+      // endpoint and the choice is cached so retries skip the doomed
+      // chat call; every other API error is rethrown
 
       const chatAttempt = async (budget) => {
         const aiResponse = await openai.chat.completions.create({
@@ -65,10 +67,24 @@ export default async function explainPatch ({
           console.log(aiResponse)
           console.log(aiResponse.choices[0].message)
         }
+        // mocks omit finish_reason; the real API always sets it
+        const finish = aiResponse.choices[0].finish_reason ?? 'stop'
+        if (finish === 'length') {
+          return {
+            text: aiResponse.choices[0].message.content,
+            truncated: true,
+            detail: 'finish_reason=length'
+          }
+        }
+        // content_filter and any unexpected finish reason leave the
+        // response unusable; more tokens cannot fix either
+        if (finish !== 'stop') {
+          throw new Error(`Review response interrupted (finish_reason=${finish})`)
+        }
         return {
           text: aiResponse.choices[0].message.content,
-          truncated: aiResponse.choices[0].finish_reason === 'length',
-          detail: 'finish_reason=length'
+          truncated: false,
+          detail: finish
         }
       }
 
@@ -86,11 +102,23 @@ export default async function explainPatch ({
           console.log(aiResponse)
           console.log(aiResponse.output_text)
         }
+        if (aiResponse.status === 'incomplete') {
+          const reason = aiResponse.incomplete_details?.reason
+          if (reason === 'max_output_tokens') {
+            return {
+              text: aiResponse.output_text,
+              truncated: true,
+              detail: 'incomplete_details=max_output_tokens'
+            }
+          }
+          // any other incompleteness (content_filter, ...) cannot be
+          // fixed with more tokens
+          throw new Error(`Review response incomplete (incomplete_details=${reason})`)
+        }
         return {
           text: aiResponse.output_text,
-          truncated: aiResponse.status === 'incomplete' &&
-            aiResponse.incomplete_details?.reason === 'max_output_tokens',
-          detail: 'incomplete_details=max_output_tokens'
+          truncated: false,
+          detail: aiResponse.status
         }
       }
 
@@ -109,36 +137,60 @@ export default async function explainPatch ({
           console.log(aiResponse)
           console.log(aiResponse.choices[0].text)
         }
+        const finish = aiResponse.choices[0].finish_reason ?? 'stop'
+        if (finish === 'length') {
+          return {
+            text: aiResponse.choices[0].text,
+            truncated: true,
+            detail: 'finish_reason=length'
+          }
+        }
+        if (finish !== 'stop') {
+          throw new Error(`Review response interrupted (finish_reason=${finish})`)
+        }
         return {
           text: aiResponse.choices[0].text,
-          truncated: aiResponse.choices[0].finish_reason === 'length',
-          detail: 'finish_reason=length'
+          truncated: false,
+          detail: finish
         }
       }
 
+      let endpoint = 'chat'
       let budget = max_tokens
+      let retries = 0
+      const attemptFor = async (name, budget) => {
+        if (endpoint === 'responses') return await responsesAttempt(budget)
+        if (endpoint === 'completions') return await completionsAttempt(budget)
+        return await chatAttempt(budget)
+      }
       for (;;) {
         let outcome
         try {
-          outcome = await chatAttempt(budget)
+          outcome = await attemptFor(endpoint, budget)
         } catch (err) {
-          const fallback = err.status === 404 && err.error?.type === 'invalid_request_error'
-          if (!fallback) {
+          const limit = outputTokenLimit(err, budget)
+          if (limit !== null && limit < budget) {
+            budget = limit
+            continue
+          }
+          if (endpoint === 'chat' && err.status === 404 && err.error?.type === 'invalid_request_error') {
+            // Codex / reasoning models only support the v1/responses
+            // endpoint. The SDK returns this hint in the 404 message.
+            endpoint = /v1\/responses/i.test(err.error?.message || err.message || '')
+              ? 'responses'
+              : 'completions'
+            outcome = await attemptFor(endpoint, budget)
+          } else {
             throw err
           }
-          // Codex / reasoning models only support the v1/responses endpoint.
-          // The SDK returns this hint in the 404 error message.
-          const wantsResponses = /v1\/responses/i.test(err.error?.message || err.message || '')
-          outcome = wantsResponses
-            ? await responsesAttempt(budget)
-            : await completionsAttempt(budget)
         }
         if (!outcome.truncated) {
           return outcome.text
         }
-        if (budget >= max_tokens * 2) {
+        if (retries >= 1) {
           throw new Error(`Review response truncated at ${budget} output tokens (${outcome.detail})`)
         }
+        retries++
         console.log(`Review response truncated at ${budget} output tokens; retrying with ${budget * 2}`)
         budget *= 2
       }

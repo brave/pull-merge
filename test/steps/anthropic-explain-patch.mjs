@@ -36,6 +36,10 @@ Given('the first stream call truncates with text {string}', function (text) {
   st.streamStops = ['max_tokens']
 })
 
+Given('the first stream call rejects the token budget with {string}', function (message) {
+  mockState().anthropic.streamErrors = [Object.assign(new Error(message), { status: 400 })]
+})
+
 Given('every stream call truncates with text {string}', function (text) {
   const st = mockState().anthropic
   st.streamText = text
