@@ -65,7 +65,7 @@ export default async function explainPatch ({
   patchBody, owner, repo,
   models = ['global.anthropic.claude-opus-5-5-v1:0'],
   system = SYSTEM_PROMPT,
-  max_tokens = 3072,
+  max_tokens = 16384,
   temperature = 1,
   amplification = 2,
   region = 'us-east-1',
@@ -107,65 +107,78 @@ export default async function explainPatch ({
         throw new Error('The patch is trivial, no need for a summarization')
       }
 
-      const commandParams = {
-        modelId: model,
-        contentType: 'application/json',
-        accept: 'application/json',
-        body: JSON.stringify({
-          anthropic_version: 'bedrock-2023-05-31',
-          max_tokens,
-          temperature,
-          system,
-          messages: [
-            {
-              role: 'user',
-              content: userPrompt
-            }
-          ]
-        })
-      }
-
-      // Add inference profile if available
-      if (inferenceProfileArn) {
-        commandParams.modelId = inferenceProfileArn
-      }
-
-      const command = new InvokeModelWithResponseStreamCommand(commandParams)
-
-      const decoder = new TextDecoder()
-      let raw = ''
-      try {
-        const streamResponse = await client.send(command)
-        for await (const chunk of streamResponse.body) {
-          if (!chunk.chunk?.bytes) continue
-          raw += decoder.decode(chunk.chunk.bytes, { stream: true })
+      let budget = max_tokens
+      for (;;) {
+        const commandParams = {
+          modelId: model,
+          contentType: 'application/json',
+          accept: 'application/json',
+          body: JSON.stringify({
+            anthropic_version: 'bedrock-2023-05-31',
+            max_tokens: budget,
+            temperature,
+            system,
+            messages: [
+              {
+                role: 'user',
+                content: userPrompt
+              }
+            ]
+          })
         }
-        raw += decoder.decode() // flush remaining multi-byte chars
-      } catch (e) {
-        throw new Error('Bedrock stream failed', { cause: e })
-      }
-      let fullText = ''
-      for (const line of raw.split(/(?<=\})(?=\{)/)) {
+
+        // Add inference profile if available
+        if (inferenceProfileArn) {
+          commandParams.modelId = inferenceProfileArn
+        }
+
+        const command = new InvokeModelWithResponseStreamCommand(commandParams)
+
+        const decoder = new TextDecoder()
+        let raw = ''
         try {
-          const event = JSON.parse(line)
-          if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
-            fullText += event.delta.text
-          } else if (debug && event.type === 'message_stop') {
-            console.log(`stop reason: ${JSON.stringify(event)}`)
+          const streamResponse = await client.send(command)
+          for await (const chunk of streamResponse.body) {
+            if (!chunk.chunk?.bytes) continue
+            raw += decoder.decode(chunk.chunk.bytes, { stream: true })
           }
+          raw += decoder.decode() // flush remaining multi-byte chars
         } catch (e) {
-          if (debug) {
-            console.log(`skipping non-JSON line: ${e.message}`)
+          throw new Error('Bedrock stream failed', { cause: e })
+        }
+        let fullText = ''
+        let stopReason = null
+        for (const line of raw.split(/(?<=\})(?=\{)/)) {
+          try {
+            const event = JSON.parse(line)
+            if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+              fullText += event.delta.text
+            } else if (event.type === 'message_delta' && event.delta?.stop_reason) {
+              stopReason = event.delta.stop_reason
+            } else if (debug && event.type === 'message_stop') {
+              console.log(`stop reason: ${JSON.stringify(event)}`)
+            }
+          } catch (e) {
+            if (debug) {
+              console.log(`skipping non-JSON line: ${e.message}`)
+            }
           }
         }
+        if (!fullText) {
+          throw new Error('Bedrock stream produced no text')
+        }
+        if (debug) {
+          console.log(`full text:\n\n${fullText}`)
+        }
+        if (stopReason !== 'max_tokens') {
+          return fullText
+        }
+        if (budget >= max_tokens * 2) {
+          throw new Error(`Review response truncated at ${budget} output tokens (stop_reason=max_tokens)`)
+        }
+        console.log(`Review response truncated at ${budget} output tokens; retrying with ${budget * 2}`)
+        budget *= 2
       }
-      if (!fullText) {
-        throw new Error('Bedrock stream produced no text')
-      }
-      if (debug) {
-        console.log(`full text:\n\n${fullText}`)
-      }
-      return fullText
     },
     headSha
   )

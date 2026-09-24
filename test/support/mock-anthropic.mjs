@@ -8,13 +8,18 @@ export default class Anthropic {
         const st = mockState().anthropic
         st.streamCalls.push(params)
         return {
-          finalText: async () => {
+          finalMessage: async () => {
             if (st.streamErrors.length > 0) {
               const err = st.streamErrors.shift()
               if (err) throw err
             }
             if (st.streamError) throw st.streamError
-            return st.streamText
+            const text = st.streamTexts.length > 0 ? st.streamTexts.shift() : st.streamText
+            const stopReason = st.streamStops.length > 0 ? st.streamStops.shift() : st.streamStop
+            return {
+              content: [{ type: 'text', text }],
+              stop_reason: stopReason
+            }
           }
         }
       }

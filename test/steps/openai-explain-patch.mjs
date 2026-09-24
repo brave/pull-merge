@@ -14,7 +14,7 @@ async function callOpenAI (world) {
       owner: world.owner,
       repo: world.repo,
       models: world.models ?? ['test-model'],
-      max_tokens: world.maxTokens ?? 3072,
+      ...(world.maxTokens ? { max_tokens: world.maxTokens } : {}),
       amplification: world.amplification ?? 2,
       include_diff: world.includeDiff ?? false,
       debug: world.debug ?? false,
@@ -44,6 +44,14 @@ Given('include_diff is on', function () {
 
 Given('the chat response content is {string}', function (content) {
   mockState().openai.chatResponse = { choices: [{ message: { content } }] }
+})
+
+Given('the first chat call truncates with content {string}', function (content) {
+  mockState().openai.chatQueue = [{ choices: [{ message: { content }, finish_reason: 'length' }] }]
+})
+
+Given('every chat call truncates with content {string}', function (content) {
+  mockState().openai.chatResponse = { choices: [{ message: { content }, finish_reason: 'length' }] }
 })
 
 Given('the legacy completion response text is {string}', function (text) {
@@ -105,7 +113,7 @@ Then('legacy request {int} prompts with the system prompt and the patch body', a
   expect(call.prompt.startsWith(`${SYSTEM_PROMPT}\n\n`)).to.equal(true)
   expect(call.prompt).to.contain(`\`\`\`\n${this.patchBody}\n\`\`\``)
   expect(call.temperature).to.equal(1)
-  expect(call.max_tokens).to.equal(3072)
+  expect(call.max_tokens).to.equal(16384)
 })
 
 Then('the cl100k_base fallback encoding was requested', function () {

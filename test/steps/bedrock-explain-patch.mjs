@@ -40,6 +40,20 @@ Given('the bedrock stream yields text {string}', function (text) {
   ]
 })
 
+Given('the first bedrock call truncates with text {string}', function (text) {
+  mockState().bedrock.chunkQueue = [[
+    JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text } }),
+    JSON.stringify({ type: 'message_delta', delta: { stop_reason: 'max_tokens' } })
+  ]]
+})
+
+Given('every bedrock call truncates with text {string}', function (text) {
+  mockState().bedrock.chunks = [
+    JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text } }),
+    JSON.stringify({ type: 'message_delta', delta: { stop_reason: 'max_tokens' } })
+  ]
+})
+
 Given('the bedrock stream yields the events:', function (doc) {
   mockState().bedrock.chunks = doc.replace(/\n$/, '').split('\n')
     .map((line) => line.trim())
