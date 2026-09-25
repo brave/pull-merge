@@ -1,7 +1,18 @@
 #!/usr/bin/env node
 import { appendFileSync } from 'node:fs'
 
+const args = process.argv.slice(2)
 if (process.env.PM_RECORD) {
-  appendFileSync(process.env.PM_RECORD, JSON.stringify({ bin: 'git', argv: process.argv.slice(2) }) + '\n')
+  appendFileSync(process.env.PM_RECORD, JSON.stringify({ bin: 'git', argv: args }) + '\n')
+}
+if (process.env.PM_GIT_RECORD) {
+  appendFileSync(process.env.PM_GIT_RECORD, JSON.stringify({ bin: 'git', argv: args }) + '\n')
+}
+if (process.env.PM_GIT_FAIL && process.env.PM_GIT_FAIL.split('|').some((fragment) => args.join(' ').includes(fragment))) {
+  process.exit(1)
+}
+if (args.includes('merge-base') && process.env.PM_MERGE_BASE !== undefined) {
+  process.stdout.write(process.env.PM_MERGE_BASE)
+  process.exit(0)
 }
 process.stdout.write(process.env.PM_DIFF_CONTENT ?? '')

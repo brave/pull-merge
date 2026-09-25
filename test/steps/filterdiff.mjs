@@ -61,6 +61,21 @@ Then('the shim received stdin {string}', async function (stdin) {
   expect(record.stdin).to.equal(stdin)
 })
 
+Then('the filterdiff shim received stdin containing {string}', async function (fragment) {
+  const record = await readRecord(this)
+  expect(record.stdin).to.contain(fragment)
+})
+
+Then('the filterdiff shim received stdin equal to the PR diff', async function () {
+  const record = await readRecord(this)
+  expect(record.stdin).to.equal(this.patchBody)
+})
+
+Then('the filterdiff shim received stdin with the GITHUB_WORKSPACE path', async function () {
+  const record = await readRecord(this)
+  expect(record.stdin).to.equal('the diff body\n' + this.wsDir + '\n')
+})
+
 Then('filterdiff resolves to the echoed content', function () {
   expect(this.error).to.equal(null)
   expect(this.result).to.equal('diff --git a/x b/x')
