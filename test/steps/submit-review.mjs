@@ -23,6 +23,10 @@ Given('debounce time {float} hours', function (debounceTime) {
   this.debounceTime = debounceTime
 })
 
+Given('bounce is on', function () {
+  this.bounce = true
+})
+
 Given('header:', function (doc) {
   this.header = trimDoc(doc)
 })
@@ -105,6 +109,7 @@ async function callModule (world, name) {
       prnum: world.prnum,
       watermark: world.watermark,
       debounceTime: world.debounceTime,
+      bounce: world.bounce ?? false,
       ...(world.explainPatch ? { explainPatch: world.explainPatch } : {}),
       ...(world.headSha ? { headSha: world.headSha } : {}),
       githubToken: world.githubToken ?? null,

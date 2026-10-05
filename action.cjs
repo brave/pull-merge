@@ -17,6 +17,7 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
 
   const options = Object.assign({
     debounce_time: '6',
+    bounce_label: 'bounce',
     amplification: '4',
     filterdiff_args: '--exclude=**/package-lock.json --exclude=**/yarn.lock --exclude=**/*.js.map --exclude=**/*.svg --exclude=**/test/data/**/* --exclude=**/docs/**/* --exclude=**/deploy/**/* --exclude=**/.htpasswd',
     openai_models: 'gpt-5.3-codex',
@@ -92,10 +93,10 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
       debug
     })
 
-    // head commit sha: prefer the pull_request event payload, otherwise
-    // (schedule / workflow_dispatch runs) fetch it from the PR so the
-    // same-commit skip can still fire
-    const fetchHeadSha = async () => {
+    // PR data: prefer the pull_request event payload, otherwise
+    // (schedule / workflow_dispatch runs) fetch it from the API so the
+    // same-commit skip and the bounce label can still work
+    const fetchPR = async () => {
       try {
         if (!Number.isFinite(options.prnum)) return undefined
         const prResponse = await github.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
@@ -103,16 +104,27 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
           repo: options.repo,
           pull_number: options.prnum
         })
-        return prResponse.data.head.sha
+        return prResponse.data
       } catch (error) {
         if (debug) console.log(`failed to fetch PR head sha: ${error.message}`)
         return undefined
       }
     }
 
-    const headSha = context.payload.pull_request && context.payload.pull_request.head && context.payload.pull_request.head.sha
-      ? context.payload.pull_request.head.sha
-      : await fetchHeadSha()
+    const payloadPR = context.payload.pull_request
+    const headShaFromPayload = payloadPR && payloadPR.head && payloadPR.head.sha
+      ? payloadPR.head.sha
+      : undefined
+    const pr = headShaFromPayload ? payloadPR : (await fetchPR() ?? null)
+    const headSha = headShaFromPayload ?? pr?.head?.sha
+
+    // bounce label: skip the debounce window so the review regenerates
+    // on every run. labels come from the payload when available, and
+    // from the fetched PR otherwise
+    const prLabels = Array.isArray(payloadPR?.labels)
+      ? payloadPR.labels
+      : Array.isArray(pr?.labels) ? pr.labels : []
+    const bounce = prLabels.some((label) => label.name === options.bounce_label)
 
     const explainPatchCb = async () => await explainPatch({
       apiKey: options.key,
@@ -151,6 +163,7 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
       header,
       explainPatch: explainPatchCb,
       debounceTime: options.debounce_time,
+      bounce,
       headSha,
       debug,
       github
