@@ -21,6 +21,7 @@ export default async function submitReview ({
   header = '',
   github = null,
   headSha = null,
+  bounce = false,
   debug = false
 }) {
   if (!github && githubToken) {
@@ -57,8 +58,9 @@ export default async function submitReview ({
   }
   const messages = (await github.graphql(query, variables)).repository.pullRequest.comments.nodes
 
-  // debounce if there are messages with watermark and the debounce time is not expired yet
-  if (messages.some(msg => msg.body.includes(watermark) && !isOlderThanXHours(msg.updatedAt, debounceTime))) {
+  // debounce if there are messages with watermark and the debounce time is
+  // not expired yet — skipped when the bounce label forces regeneration
+  if (!bounce && messages.some(msg => msg.body.includes(watermark) && !isOlderThanXHours(msg.updatedAt, debounceTime))) {
     if (debug) console.log('debounced')
     return true
   }

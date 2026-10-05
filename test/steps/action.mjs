@@ -28,10 +28,21 @@ Given('the action context has PR head sha {string}', function (sha) {
   this.prHeadSha = sha
 })
 
+Given('the action context has PR labels {string}', function (labels) {
+  this.prLabels = labels.split(',').map((s) => s.trim()).filter(Boolean)
+})
+
 Given('the PR head sha from the API is {string}', function (sha) {
   mockState().github.requestRoutes.push({
     match: (route, opts) => route === PULLS_ROUTE && opts?.mediaType?.format !== 'diff',
     reply: { data: { head: { sha } } }
+  })
+})
+
+Given('the PR from the API has head sha {string} and labels {string}', function (sha, labels) {
+  mockState().github.requestRoutes.push({
+    match: (route, opts) => route === PULLS_ROUTE && opts?.mediaType?.format !== 'diff',
+    reply: { data: { head: { sha }, labels: labels.split(',').map((s) => s.trim()).filter(Boolean).map((name) => ({ name })) } }
   })
 })
 
@@ -75,7 +86,8 @@ When('the action runs', async function () {
       : {
           pull_request: {
             user: { login: this.prAuthor ?? this.actor ?? 'test-actor' },
-            ...(this.prHeadSha ? { head: { sha: this.prHeadSha } } : {})
+            ...(this.prHeadSha ? { head: { sha: this.prHeadSha } } : {}),
+            ...(this.prLabels ? { labels: this.prLabels.map((name) => ({ name })) } : {})
           }
         }
   }

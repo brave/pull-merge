@@ -40,6 +40,7 @@ export default async function subtleSubmitReview ({
   github = null,
   header = '',
   headSha = null,
+  bounce = false,
   debug = false
 }) {
   if (!github && githubToken) {
@@ -78,8 +79,10 @@ export default async function subtleSubmitReview ({
     return true
   }
 
-  // debounce if the PR description contains a watermark and the debounce time is not expired yet
-  if (msgPre.body.includes(watermark) && !isOlderThanXHours(msgPre.updatedAt, debounceTime)) {
+  // debounce if the PR description contains a watermark and the debounce
+  // time is not expired yet — skipped when the bounce label forces
+  // regeneration
+  if (!bounce && msgPre.body.includes(watermark) && !isOlderThanXHours(msgPre.updatedAt, debounceTime)) {
     throw new Error('debounce')
   }
 

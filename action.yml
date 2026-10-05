@@ -15,6 +15,11 @@ inputs:
   debounce_time:
     description: |
       Debounce Time in hours
+  bounce_label:
+    description: |
+      PR label that disables the debounce window, forcing the review to
+      regenerate on every run. Defaults to "bounce"
+    required: false
   amplification:
     description: |
       Amplification factor for the generated text
