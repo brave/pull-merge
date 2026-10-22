@@ -19,7 +19,7 @@ module.exports = async ({ github, context, inputs, actionPath }) => {
     debounce_time: '6',
     bounce_label: 'bounce',
     amplification: '4',
-    filterdiff_args: '--exclude=**/package-lock.json --exclude=**/yarn.lock --exclude=**/*.js.map --exclude=**/*.svg --exclude=**/test/data/**/* --exclude=**/docs/**/* --exclude=**/deploy/**/* --exclude=**/.htpasswd',
+    filterdiff_args: '--exclude=**/package-lock.json --exclude=**/yarn.lock --exclude=**/pnpm-lock.yaml --exclude=**/pnpm-workspace.yaml --exclude=**/*.js.map --exclude=**/*.svg --exclude=**/test/data/**/* --exclude=**/docs/**/* --exclude=**/deploy/**/* --exclude=**/.htpasswd',
     openai_models: 'gpt-5.3-codex',
     anthropic_models: 'claude-opus-5-5',
     bedrock_models: 'global.anthropic.claude-opus-5-5-v1:0',
