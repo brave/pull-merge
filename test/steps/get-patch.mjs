@@ -95,7 +95,8 @@ When('getPatch is called', async function () {
       githubToken: this.githubToken ?? null,
       github: this.github ?? null,
       runIfPrivate: this.runIfPrivate ?? false,
-      debug: this.debug ?? false
+      debug: this.debug ?? false,
+      _sleep: this.sleep ?? null
     })
   } catch (err) {
     this.error = err

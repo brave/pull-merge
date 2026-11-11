@@ -2,13 +2,15 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import os from 'os'
 import { execSync } from 'child_process'
+import { fetchWithRetry } from './fetchRetry.js'
 
 export default async function getPatch ({
   owner, repo, prnum,
   githubToken = null,
   github = null,
   runIfPrivate = false,
-  debug = false
+  debug = false,
+  _sleep = null
 }) {
   if (!github && githubToken) {
     const { Octokit } = await import('@octokit/core')
@@ -25,7 +27,9 @@ export default async function getPatch ({
   let patchBody = null
 
   if (!github && !githubToken) {
-    const patchResponse = await fetch(`https://github.com/${owner}/${repo}/pull/${prnum}.diff`)
+    // fetchWithRetry: transient 5xx/timeouts/network errors are retried with
+    // exponential backoff; deterministic 4xx fails fast after one attempt.
+    const patchResponse = await fetchWithRetry(`https://github.com/${owner}/${repo}/pull/${prnum}.diff`, { sleep: _sleep || undefined })
 
     if (patchResponse.status !== 200) {
       throw new Error(`Could not fetch PR diff: ${patchResponse.status} ${patchResponse.statusText}`)

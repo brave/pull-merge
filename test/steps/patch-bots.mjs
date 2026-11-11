@@ -63,7 +63,8 @@ async function callPatchModule (world, name) {
       prnum: world.prnum,
       githubToken: world.githubToken ?? null,
       github: world.github ?? null,
-      debug: world.debug ?? false
+      debug: world.debug ?? false,
+      _sleep: world.sleep ?? null
     })
   } catch (err) {
     world.error = err

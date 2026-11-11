@@ -1,11 +1,13 @@
 import { markdownToTxt } from 'markdown-to-txt'
+import { fetchWithRetry } from './fetchRetry.js'
 
 // runIfPrivate always ignored since renovate patches are always public
 export default async function getRenovatePatch ({
   owner, repo, prnum,
   githubToken = null,
   github = null,
-  debug = false
+  debug = false,
+  _sleep = null
 }) {
   if (!github && githubToken) {
     const { Octokit } = await import('@octokit/core')
@@ -82,7 +84,9 @@ export default async function getRenovatePatch ({
     console.log(`link: ${link}, versions: ${versions}`)
   }
 
-  const patchResponse = await fetch(`${link}/compare/${fromFiltered}..${toFiltered}.diff`)
+  // fetchWithRetry: transient 5xx/timeouts are retried with exponential
+  // backoff; deterministic 4xx (404) fails fast after one attempt.
+  const patchResponse = await fetchWithRetry(`${link}/compare/${fromFiltered}..${toFiltered}.diff`, { sleep: _sleep || undefined })
 
   if (patchResponse.status !== 200) {
     throw new Error(`Could not fetch PR diff: ${patchResponse.status} ${patchResponse.statusText}`)
