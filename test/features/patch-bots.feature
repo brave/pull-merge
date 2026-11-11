@@ -221,8 +221,10 @@ Feature: bot patch extraction
       v1.54.0
       """
     And the compare diff at "https://github.com/semgrep/semgrep/compare/v1.53.0..v1.54.0.diff" responds with status 500 "Internal Server Error"
+    And the fetch backoff is disabled
     When getRenovatePatch is called
     Then it rejects with "Could not fetch PR diff: 500 Internal Server Error"
+    And the diff was fetched 5 times from "https://github.com/semgrep/semgrep/compare/v1.53.0..v1.54.0.diff"
 
   Scenario: renovate logs debug output
     Given a github client
