@@ -1,0 +1,72 @@
+name: image
+
+# Builds and pushes the prebuilt runtime image consumed by
+# brave/workflows (.github/workflows/pull-merge.yml container:):
+# ghcr.io/brave/pull-merge:{latest,v1,sha-<short>}.
+#
+# The pnpm pin is computed from package.json — the Dockerfile receives
+# it as a build arg and contains no duplicated pin. Rebuilds are
+# triggered by anything that changes the baked toolchain or its lockfile.
+on:
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - .github/workflows/image.yml
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Compute tool pins from source
+        id: pins
+        run: |
+          set -euo pipefail
+          PNPM_VERSION="$(node -e "console.log(require('./package.json').packageManager.split('@')[1])")"
+          [ -n "$PNPM_VERSION" ] || { echo "pnpm pin not found in package.json" >&2; exit 1; }
+          echo "pnpm_version=$PNPM_VERSION" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b9bd4a8 # v3.11.1
+
+      - uses: docker/login-action@5e57f957a7a8f57e101ef357d5c17d00f413ccea # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/brave/pull-merge:latest
+            ghcr.io/brave/pull-merge:v1
+            ghcr.io/brave/pull-merge:sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            PNPM_VERSION=${{ steps.pins.outputs.pnpm_version }}
+
+      # Private org repos can only pull the package anonymously when it is
+      # public. GITHUB_TOKEN often lacks admin:packages — best effort; if
+      # this 403s, flip visibility once manually (PR body documents this).
+      - name: Make package public (best effort)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api -X PATCH /orgs/brave/packages/container/pull-merge \
+            -f visibility=public || \
+            echo "::warning::Could not set package visibility — set ghcr.io/brave/pull-merge to public manually once"
