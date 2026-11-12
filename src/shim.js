@@ -95,17 +95,34 @@ export async function buildGithubScriptShim ({
   const context = buildContext(env, fsx)
 
   let github
+  const octokitOpts = {
+    auth: env.GITHUB_TOKEN,
+    // plugin-throttling validates the handlers at construction time when
+    // enabled — mirror the fallbacks actions/github-script installs.
+    throttle: {
+      enabled: env.GITHUB_ACTIONS === 'true',
+      onRateLimit: (retryAfter, options, octokit) => {
+        octokit.log.warn(`Request quota exhausted for request ${options.method} ${options.url}`)
+        if (options.request.retryCount === 0) {
+          octokit.log.warn(`Retrying after ${retryAfter} seconds!`)
+          return true
+        }
+        return false
+      },
+      onSecondaryRateLimit: (retryAfter, options, octokit) => {
+        octokit.log.warn(`Secondary rate limit triggered for request ${options.method} ${options.url}`)
+        return true
+      }
+    },
+    retry: { enabled: true }
+  }
   if (OctokitClass) {
     // Test seam: a fake constructor recording its options.
-    github = new OctokitClass({ auth: env.GITHUB_TOKEN })
+    github = new OctokitClass(octokitOpts)
   } else {
     const actionRequire = createRequire(path.join(actionPath, 'package.json'))
     const { Octokit } = actionRequire('octokit')
-    github = new Octokit({
-      auth: env.GITHUB_TOKEN,
-      throttle: { enabled: env.GITHUB_ACTIONS === 'true' },
-      retry: { enabled: true }
-    })
+    github = new Octokit(octokitOpts)
   }
 
   return { github, context, core, os, path }
