@@ -2,7 +2,10 @@ name: image
 
 # Builds and pushes the prebuilt runtime image consumed by
 # brave/workflows (.github/workflows/pull-merge.yml container:):
-# ghcr.io/brave/pull-merge:{latest,v1,sha-<short>}.
+#
+#   push to main      → ghcr.io/brave/pull-merge:{latest,v1,sha-<sha>}
+#   pull_request      → ghcr.io/brave/pull-merge:pr-<number> (validation tag)
+#   workflow_dispatch → ghcr.io/brave/pull-merge:branch-<ref-name>
 #
 # The pnpm pin is computed from package.json — the Dockerfile receives
 # it as a build arg and contains no duplicated pin. Rebuilds are
@@ -10,6 +13,13 @@ name: image
 on:
   push:
     branches: [main]
+    paths:
+      - Dockerfile
+      - .github/workflows/image.yml
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+  pull_request:
     paths:
       - Dockerfile
       - .github/workflows/image.yml
@@ -26,7 +36,7 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
 
       - name: Compute tool pins from source
         id: pins
@@ -36,24 +46,44 @@ jobs:
           [ -n "$PNPM_VERSION" ] || { echo "pnpm pin not found in package.json" >&2; exit 1; }
           echo "pnpm_version=$PNPM_VERSION" >> "$GITHUB_OUTPUT"
 
-      - uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b9bd4a8 # v3.11.1
+      # PR runs publish a throwaway pr-<number> tag so the image can be
+      # tested end to end without touching latest/v1; forks build only —
+      # their GITHUB_TOKEN cannot write packages.
+      - name: Compute image tags
+        id: tags
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          case "$EVENT_NAME" in
+            pull_request) TAG="ghcr.io/brave/pull-merge:pr-${PR_NUMBER}" ;;
+            push)         TAG="$(printf 'ghcr.io/brave/pull-merge:latest\nghcr.io/brave/pull-merge:v1\nghcr.io/brave/pull-merge:sha-%s' "$SHA")" ;;
+            *)            TAG="ghcr.io/brave/pull-merge:branch-${REF_NAME}" ;;
+          esac
+          {
+            echo "tags<<IMAGE_TAGS_EOF"
+            echo "$TAG"
+            echo "IMAGE_TAGS_EOF"
+          } >> "$GITHUB_OUTPUT"
 
-      - uses: docker/login-action@5e57f957a7a8f57e101ef357d5c17d00f413ccea # v3.4.0
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           platforms: linux/amd64
-          push: true
-          tags: |
-            ghcr.io/brave/pull-merge:latest
-            ghcr.io/brave/pull-merge:v1
-            ghcr.io/brave/pull-merge:sha-${{ github.sha }}
+          push: ${{ github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork }}
+          tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -63,6 +93,7 @@ jobs:
       # public. GITHUB_TOKEN often lacks admin:packages — best effort; if
       # this 403s, flip visibility once manually (PR body documents this).
       - name: Make package public (best effort)
+        if: github.event_name == 'push'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
