@@ -25,7 +25,12 @@
 # Build args are injected by .github/workflows/image.yml from
 # package.json — no duplicated pins here.
 
-FROM ubuntu:24.04
+# Base images are pinned by digest AND patched version: a mutable tag
+# (node:24-slim, ubuntu:24.04) cannot be verified against a security
+# patch level, and this image ships to jobs with repo tokens. Bump the
+# digests deliberately (docker buildx imagetools inspect <name:tag>) —
+# do not retag to floating refs.
+FROM ubuntu:24.04@sha256:73b999393d07f2bf65a40373778a44dc9a6d54ad7718d29247d8ff9413c4d6a8
 
 ARG PNPM_VERSION
 
@@ -47,8 +52,8 @@ RUN apt-get update -qq \
 # containers). npm/npx are symlinks into the copied tree. corepack is not
 # shipped: inside the image every pnpm invocation uses the baked pnpm
 # binary; corepack is only a host-mode concern.
-COPY --from=node:24-slim /usr/local/bin/node /usr/local/bin/node
-COPY --from=node:24-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
+COPY --from=node:24.22.1-slim@sha256:be8204d4bd327363357f532187b752ff62759c31bedf98e9e18fc08c9cbd605c /usr/local/bin/node /usr/local/bin/node
+COPY --from=node:24.22.1-slim@sha256:be8204d4bd327363357f532187b752ff62759c31bedf98e9e18fc08c9cbd605c /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
   && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
   && npm install -g "pnpm@${PNPM_VERSION}" \
