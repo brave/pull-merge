@@ -99,7 +99,9 @@ function buildCore (env, fsx, log = console.log) {
     setOutput: (name, value) => {
       const v = String(value)
       if (v.includes(GHADELIMITER)) {
-        throw new Error(`Set output ${name} attempted to use the reserved delimiter ${GHADELIMITER}`)
+        // No delimiter value in the message: an attacker-controlled
+        // value must not be able to read it back from the logs.
+        throw new Error(`Set output ${name} attempted to use the reserved ghadelimiter`)
       }
       // Multiline values need the runner's delimiter format; a bare
       // name=value line would leak every line after the first into the
@@ -144,8 +146,12 @@ function buildSummary (env, fsx, log = console.log) {
     addList: (items) => { buffer += `${items.map(i => `  - ${i}`).join('\n')}\n`; return api },
     addTable: (rows) => {
       const cells = row => `| ${row.map(c => String(c).replace(/\|/g, '\\|')).join(' | ')} |`
-      buffer += rows[0].map(() => ' --- ').reduce((acc, c) => acc + `|${c}`, '') + '|\n'
-      buffer += `${rows.map(cells).join('\n')}\n`
+      const [header, ...data] = rows
+      // Markdown tables must render header row, separator, then data —
+      // any other order is not a table.
+      buffer += `${cells(header)}\n`
+      buffer += `${header.map(() => ' --- ').reduce((acc, c) => acc + `|${c}`, '')}|\n`
+      if (data.length > 0) buffer += `${data.map(cells).join('\n')}\n`
       return api
     },
     addDetails: (label, content) => { buffer += `<details><summary>${label}</summary>\n${content}\n</details>\n`; return api },

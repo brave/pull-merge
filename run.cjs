@@ -31,9 +31,12 @@ function readInputs () {
       throw new Error(`INPUTS_JSON is not valid JSON: ${err.message}`)
     }
   }
-  // Fallback (tests, manual runs): JSON on stdin. Empty or unparsable
-  // stdin is a hard failure — running with silently-empty inputs would
-  // act with no token and no config.
+  // Fallback (tests, manual runs): JSON on stdin. A TTY stdin would
+  // block forever waiting for input — fail fast with the same message
+  // as an empty pipe.
+  if (process.stdin.isTTY) {
+    throw new Error('no inputs: set INPUTS_JSON or pipe the inputs JSON on stdin')
+  }
   let raw = ''
   try {
     raw = fs.readFileSync(0, 'utf-8').trim()

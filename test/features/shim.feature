@@ -46,6 +46,13 @@ Feature: github-script surface shim
     When the shim builds the github-script surface
     Then core summary writes the rendered markdown to GITHUB_STEP_SUMMARY
 
+  Scenario: the shim core summary renders tables with the header first
+    Given a runner environment with repository "brave/core" and event "pull_request"
+    And an event payload file describing pull request 42
+    And GITHUB_ENV and GITHUB_STEP_SUMMARY files are configured
+    When the shim builds the github-script surface
+    Then core summary addTable renders the header row before the separator
+
   Scenario: the shim github client authenticates with the runner token
     Given a runner environment with repository "brave/core" and event "pull_request"
     And an event payload file describing pull request 42

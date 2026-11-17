@@ -115,9 +115,12 @@ Then('core notice emits a notice annotation', function () {
 
 Then('core setFailed emits an error annotation and fails the step', function () {
   this.shimResult.core.setFailed('fatal')
-  expect(this.shimLog).to.include('::error::fatal')
-  expect(process.exitCode).to.equal(1)
-  process.exitCode = 0
+  try {
+    expect(this.shimLog).to.include('::error::fatal')
+    expect(process.exitCode).to.equal(1)
+  } finally {
+    process.exitCode = 0
+  }
 })
 
 Then('core setOutput appends to the GITHUB_OUTPUT file for single-line values', function () {
@@ -149,6 +152,11 @@ Then('core getInput throws for a missing required input', function () {
 Then('core summary writes the rendered markdown to GITHUB_STEP_SUMMARY', async function () {
   await this.shimResult.core.summary.addHeading('Review', 2).addRaw('done').write()
   expect(this.shimFsx.__files[SUMMARY_FILE]).to.equal('## Review\ndone')
+})
+
+Then('core summary addTable renders the header row before the separator', async function () {
+  await this.shimResult.core.summary.addTable([['rule', 'count'], ['XSS', '2']]).write()
+  expect(this.shimFsx.__files[SUMMARY_FILE]).to.equal('| rule | count |\n| --- | --- |\n| XSS | 2 |\n')
 })
 
 Then('the shim octokit is authenticated with the runner token', function () {
