@@ -17,6 +17,7 @@
  */
 
 import fs from 'fs'
+import crypto from 'crypto'
 import os from 'os'
 import path from 'path'
 import { createRequire } from 'module'
@@ -47,37 +48,125 @@ function readPayload (env, fsx) {
 }
 
 /**
- * @actions/core-compatible logger. setOutput prefers the runner's
- * GITHUB_OUTPUT file and falls back to the ::set-output:: workflow
- * command (github-script behavior on older runners); setSecret emits
- * ::add-mask::, which the runner picks up from stdout.
+ * @actions/core-compatible logger.
+ *
+ * warning/error/notice emit the runner annotation commands (::warning::,
+ * ::error::, ::notice::) instead of plain text — annotations surface in
+ * the GitHub UI like @actions/core does. setOutput/exportVariable use
+ * the runner's heredoc-delimiter file format so multiline values survive
+ * round-tripping; single-line values keep the plain name=value form.
  */
+const GHADELIMITER = 'ghadelimiter_' + crypto.randomUUID()
+
+function appendEnvFile (env, fsx, fileVar, content) {
+  const file = env[fileVar]
+  if (!file) return false
+  fsx.appendFileSync(file, content)
+  return true
+}
+
 function buildCore (env, fsx, log = console.log) {
+  const summary = buildSummary(env, fsx, log)
   return {
-    info: (msg) => log(`[info] ${msg}`),
+    isDebug: () => env.RUNNER_DEBUG === '1' || String(env.DEBUG || '') === 'true',
+    info: (msg) => log(String(msg)),
     debug: (msg) => log(`[debug] ${msg}`),
-    warning: (msg) => log(`[warning] ${msg}`),
-    error: (msg) => log(`[error] ${msg}`),
-    notice: (msg) => log(`[notice] ${msg}`),
+    warning: (msg) => log(`::warning::${msg}`),
+    error: (msg) => log(`::error::${msg}`),
+    notice: (msg) => log(`::notice::${msg}`),
     setFailed: (msg) => {
-      log(`[error] ${msg}`)
+      log(`::error::${msg}`)
       process.exitCode = 1
     },
+    getInput: (name, options = {}) => {
+      const key = `INPUT_${name.replace(/ /g, '_').toUpperCase()}`
+      const val = env[key] || ''
+      if (options && options.required && !val) {
+        throw new Error(`Input required and not supplied: ${name}`)
+      }
+      return val
+    },
+    startGroup: (name) => log(`::group::${name}`),
+    endGroup: () => log('::endgroup::'),
+    group: async (name, fn) => {
+      log(`::group::${name}`)
+      try {
+        return await fn()
+      } finally {
+        log('::endgroup::')
+      }
+    },
     setOutput: (name, value) => {
-      const out = env.GITHUB_OUTPUT
-      if (out) {
-        fsx.appendFileSync(out, `${name}=${value}\n`)
-      } else {
-        log(`::set-output name=${name}::${value}`)
+      const v = String(value)
+      if (v.includes(GHADELIMITER)) {
+        // No delimiter value in the message: an attacker-controlled
+        // value must not be able to read it back from the logs.
+        throw new Error(`Set output ${name} attempted to use the reserved ghadelimiter`)
+      }
+      // Multiline values need the runner's delimiter format; a bare
+      // name=value line would leak every line after the first into the
+      // file as bogus keys.
+      const rendered = v.includes('\n')
+        ? `${name}<<${GHADELIMITER}\n${v}\n${GHADELIMITER}\n`
+        : `${name}=${v}\n`
+      if (!appendEnvFile(env, fsx, 'GITHUB_OUTPUT', rendered)) {
+        log(`::set-output name=${name}::${v}`)
       }
     },
     setSecret: (value) => log(`::add-mask::${value}`),
     exportVariable: (name, value) => {
-      const envFile = env.GITHUB_ENV
-      if (envFile) fsx.appendFileSync(envFile, `${name}=${value}\n`)
-      else process.env[name] = value
-    }
+      const v = String(value)
+      const rendered = v.includes('\n')
+        ? `${name}<<${GHADELIMITER}\n${v}\n${GHADELIMITER}\n`
+        : `${name}=${v}\n`
+      if (!appendEnvFile(env, fsx, 'GITHUB_ENV', rendered)) {
+        process.env[name] = value
+      }
+    },
+    summary
   }
+}
+
+/**
+ * Job-summary writer (@actions/core.summary surface). Buffers markdown
+ * and writes it to GITHUB_STEP_SUMMARY on write(); falls back to stdout
+ * logging when the file is absent (tests, local runs).
+ */
+function buildSummary (env, fsx, log = console.log) {
+  let buffer = ''
+  const api = {
+    addRaw: (text, opts = {}) => { buffer += text; if (opts.addEOL) buffer += '\n'; return api },
+    addEOL: () => { buffer += '\n'; return api },
+    addCodeBlock: (code, lang) => { buffer += `\`\`\`${lang || ''}\n${code}\n\`\`\`\n`; return api },
+    addHeading: (heading, level) => { buffer += `${'#'.repeat(Math.min(level || 2, 6))} ${heading}\n`; return api },
+    addBreak: () => { buffer += '\n<br>\n\n'; return api },
+    addLink: (text, href) => { buffer += `[${text}](${href})`; return api },
+    addQuote: (quote) => { buffer += `> ${quote}\n`; return api },
+    addSeparator: () => { buffer += '\n---\n\n'; return api },
+    addList: (items) => { buffer += `${items.map(i => `  - ${i}`).join('\n')}\n`; return api },
+    addTable: (rows) => {
+      const cells = row => `| ${row.map(c => String(c).replace(/\|/g, '\\|')).join(' | ')} |`
+      const [header, ...data] = rows
+      // Markdown tables must render header row, separator, then data —
+      // any other order is not a table.
+      buffer += `${cells(header)}\n`
+      buffer += `${header.map(() => ' --- ').reduce((acc, c) => acc + `|${c}`, '')}|\n`
+      if (data.length > 0) buffer += `${data.map(cells).join('\n')}\n`
+      return api
+    },
+    addDetails: (label, content) => { buffer += `<details><summary>${label}</summary>\n${content}\n</details>\n`; return api },
+    write: async () => {
+      if (buffer === '') return
+      const file = env.GITHUB_STEP_SUMMARY
+      if (file) fsx.appendFileSync(file, buffer)
+      else log(buffer)
+      buffer = ''
+    },
+    clear: () => { buffer = ''; return api },
+    stringify: () => buffer,
+    isEmptyBuffer: () => buffer === ''
+  }
+  return api
 }
 
 /**

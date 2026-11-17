@@ -58,10 +58,13 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+          # Docker tags cannot contain '/' — dispatch-triggered branch
+          # names like "feat/prebuilt-image" must be flattened.
+          SAFE_REF="${REF_NAME//\//-}"
           case "$EVENT_NAME" in
             pull_request) TAG="ghcr.io/brave/pull-merge:pr-${PR_NUMBER}" ;;
             push)         TAG="$(printf 'ghcr.io/brave/pull-merge:latest\nghcr.io/brave/pull-merge:v1\nghcr.io/brave/pull-merge:sha-%s' "$SHA")" ;;
-            *)            TAG="ghcr.io/brave/pull-merge:branch-${REF_NAME}" ;;
+            *)            TAG="ghcr.io/brave/pull-merge:branch-${SAFE_REF}" ;;
           esac
           {
             echo "tags<<IMAGE_TAGS_EOF"

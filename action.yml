@@ -135,14 +135,15 @@ runs:
       # executes on the host — the job container never saw the review
       # pipeline. run.cjs is a run: step: it executes inside the container
       # and rebuilds the github-script surface (github/context) from the
-      # standard runner environment. Inputs arrive on stdin as JSON via a
-      # quoted heredoc, so no YAML quoting pitfalls.
+      # standard runner environment. Inputs travel via the INPUTS_JSON
+      # env var: env values are not rendered into the script body nor
+      # echoed, so an input containing shell metacharacters (or a
+      # heredoc-delimiter-looking line) can never execute or truncate it.
       run: |-
-        node "${{ github.action_path }}/run.cjs" <<'PULL_MERGE_INPUTS_EOF'
-        ${{ toJson(inputs) }}
-        PULL_MERGE_INPUTS_EOF
+        node "${{ github.action_path }}/run.cjs"
       shell: bash
       if: ${{ !contains(github.event.pull_request.labels.*.name, 'CI/skip-llm') && !contains(github.event.pull_request.labels.*.name, 'CI/skip') && github.event.pull_request.draft == false }}
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
         DEBUG: ${{ (inputs.debug == 'true' || runner.debug) && 'true' || 'false'}}
+        INPUTS_JSON: ${{ toJson(inputs) }}

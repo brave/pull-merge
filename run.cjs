@@ -7,10 +7,14 @@
  * and rebuilds the github-script surface (github/context) from the
  * standard runner environment via src/shim.js.
  *
- * Inputs arrive on stdin as JSON (a quoted heredoc in action.yml), the
- * same object ${{ toJson(inputs) }} passed to github-script. The
- * GITHUB_TOKEN flows through the GITHUB_TOKEN env the action.yml step
- * sets; when absent it is bridged from the inputs.
+ * Inputs arrive via the INPUTS_JSON environment variable (action.yml
+ * sets INPUTS_JSON: ${{ toJson(inputs) }}); stdin JSON is accepted as a
+ * fallback for local runs and tests. Env values are never rendered into
+ * the script body nor echoed, so an input containing shell
+ * metacharacters can never execute there, and tokens stay out of the
+ * logs. The GITHUB_TOKEN env the action.yml step exports authenticates
+ * the shim's Octokit; the input token (when present) wins, matching
+ * github-script, and is bridged into the environment.
  */
 
 const fs = require('fs')
@@ -18,19 +22,44 @@ const path = require('path')
 
 const actionPath = process.env.ACTION_PATH || __dirname
 
-let inputs = {}
-try {
-  const raw = fs.readFileSync(0, 'utf-8')
-  if (raw.trim()) inputs = JSON.parse(raw)
-} catch (err) {
-  if (process.env.DEBUG === 'true') console.log(`no stdin inputs: ${err.message}`)
-}
-
-if (inputs.github_token && !process.env.GITHUB_TOKEN) {
-  process.env.GITHUB_TOKEN = inputs.github_token
+function readInputs () {
+  const fromEnv = process.env.INPUTS_JSON
+  if (fromEnv !== undefined) {
+    try {
+      return JSON.parse(fromEnv)
+    } catch (err) {
+      throw new Error(`INPUTS_JSON is not valid JSON: ${err.message}`)
+    }
+  }
+  // Fallback (tests, manual runs): JSON on stdin. A TTY stdin would
+  // block forever waiting for input — fail fast with the same message
+  // as an empty pipe.
+  if (process.stdin.isTTY) {
+    throw new Error('no inputs: set INPUTS_JSON or pipe the inputs JSON on stdin')
+  }
+  let raw = ''
+  try {
+    raw = fs.readFileSync(0, 'utf-8').trim()
+  } catch (err) {
+    throw new Error(`failed to read inputs from stdin: ${err.message}`)
+  }
+  if (!raw) {
+    throw new Error('no inputs: set INPUTS_JSON or pipe the inputs JSON on stdin')
+  }
+  try {
+    return JSON.parse(raw)
+  } catch (err) {
+    throw new Error(`stdin is not valid JSON: ${err.message}`)
+  }
 }
 
 async function main () {
+  const inputs = readInputs()
+
+  if (inputs.github_token) {
+    process.env.GITHUB_TOKEN = inputs.github_token
+  }
+
   const { buildGithubScriptShim } = await import(path.join(actionPath, 'src', 'shim.js'))
   const { github, context } = await buildGithubScriptShim({ actionPath })
   const script = require(path.join(actionPath, 'action.cjs'))
