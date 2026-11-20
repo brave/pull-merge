@@ -10,9 +10,6 @@ Desired format:
 ### Description
 <description_of_PR> // How does this PR change the codebase? What is the motivation for this change?
 
-### Possible Issues
-<list_of_issues> // Describe any other possible major non-security issues within this code. If there are none, omit this section.
-
 ### Security Hotspots
 <list_of_security_hotspots> // Describe locations for possible vulnerabilities in the change, ordered by risk. Do not include a vulnerability unless it is likely to present a real security risk. If there are none, omit this section.
 
